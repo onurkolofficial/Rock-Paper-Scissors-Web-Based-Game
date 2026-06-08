@@ -11,7 +11,7 @@ interface SettingsContextType {
   toggleVibration: () => void;
   changeLanguage: (lang: string) => void;
   setVolume: (val: number) => void;
-  vibrate: () => void;
+  vibrate: (type?: 'short' | 'normal' | 'long') => void;
   playSound: (type: 'click' | 'draw' | 'lose' | 'win') => void;
 }
 
@@ -80,19 +80,39 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('sps_vibration', String(newVal));
   };
 
+  useEffect(() => {
+    i18n.changeLanguage(language);
+    document.documentElement.lang = language;
+  }, []);
+
   const changeLanguage = (lang: string) => {
     setLanguage(lang);
     i18n.changeLanguage(lang);
+    document.documentElement.lang = lang;
     localStorage.setItem('sps_lang', lang);
   };
 
-  const vibrate = async () => {
+  const vibrate = async (type: 'short' | 'normal' | 'long' = 'short') => {
     if (vibrationEnabled) {
       try {
-        await Haptics.impact({ style: ImpactStyle.Light });
+        if (type === 'short') {
+          await Haptics.impact({ style: ImpactStyle.Light });
+        } else if (type === 'normal') {
+          await Haptics.impact({ style: ImpactStyle.Medium });
+        } else if (type === 'long') {
+          await Haptics.notification({ type: 'ERROR' as any });
+        }
       } catch (e) {
-        // Haptics might not be available on web
+        // Fallback for web
       }
+      
+      try {
+        if (navigator && navigator.vibrate) {
+          if (type === 'short') navigator.vibrate(50);
+          else if (type === 'normal') navigator.vibrate(200);
+          else navigator.vibrate(500);
+        }
+      } catch(e) {}
     }
   };
 

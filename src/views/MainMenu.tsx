@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppNavigation } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion } from 'motion/react';
 import { Play, Users, Settings as SettingsIcon, LogOut, LogIn, BarChart2 } from 'lucide-react';
 import { App as CapacitorApp } from '@capacitor/app';
+import AlertModal from '../components/AlertModal';
+import { showBanner, hideBanner } from '../utils/ads';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
@@ -17,9 +19,16 @@ const GoogleIcon = () => (
 
 const MainMenu: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { navigate, userName, setUserName } = useAppNavigation();
+  const { navigate, userName, setUserName, loginWithGoogle } = useAppNavigation();
 
   const { toggleSound, playSound } = useSettings();
+
+  useEffect(() => {
+    showBanner();
+    return () => {
+      hideBanner();
+    };
+  }, []);
 
   const handleExit = () => {
     playSound('click');
@@ -31,10 +40,15 @@ const MainMenu: React.FC = () => {
     return str.toLocaleUpperCase(i18n.language === 'tr' ? 'tr-TR' : 'en-US');
   };
 
-  const handleGoogleLoginMock = () => {
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleGoogleLoginMock = async () => {
     playSound('click');
-    const fakeName = 'Onur KOL';
-    setUserName(fakeName);
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      setErrorMsg(t('login_error_message') || 'Google Play Oyunlar ile giriş yapılamadı.');
+    }
   };
 
   const handleGoogleLogoutMock = () => {
@@ -140,6 +154,12 @@ const MainMenu: React.FC = () => {
           </button>
         </div>
       </motion.div>
+      <AlertModal 
+        isOpen={!!errorMsg} 
+        title={toUpper(t('login_error_title') || 'GİRİŞ BAŞARISIZ')}
+        message={errorMsg || ''}
+        onClose={() => setErrorMsg(null)}
+      />
     </div>
   );
 };

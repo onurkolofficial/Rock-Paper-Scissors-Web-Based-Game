@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Hand, HandMetal, Scissors } from 'lucide-react';
 
 const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
-  if (move === 'rock') return <HandMetal className className={className} />;
-  if (move === 'paper') return <Hand className className={className} />;
-  return <Scissors className className={className} />;
+  if (move === 'rock') return <img src="/gfx_stone.png" alt="Rock" className={className} />;
+  if (move === 'paper') return <img src="/gfx_paper.png" alt="Paper" className={className} />;
+  return <img src="/gfx_scissors.png" alt="Scissors" className={className} />;
 };
 
 const TwoPlayerGame: React.FC = () => {
@@ -24,6 +24,8 @@ const TwoPlayerGame: React.FC = () => {
   const [result, setResult] = useState<Result>(null); // from p1 perspective
   
   const [score, setScore] = useState({ p1: 0, p2: 0, draws: 0 });
+  const [p1Streak, setP1Streak] = useState(0);
+  const [p2Streak, setP2Streak] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   const handleExitClick = () => {
@@ -41,17 +43,24 @@ const TwoPlayerGame: React.FC = () => {
       setShowResult(true);
       setTimeLeft(null);
       
-      vibrate();
-      
       if (outcome === 'win') {
         setScore(s => ({ ...s, p1: s.p1 + 1 }));
+        setP1Streak(s => s + 1);
+        setP2Streak(0);
         playSound('win');
+        vibrate('normal');
       } else if (outcome === 'lose') {
         setScore(s => ({ ...s, p2: s.p2 + 1 }));
+        setP2Streak(s => s + 1);
+        setP1Streak(0);
         playSound('win');
+        vibrate('normal');
       } else {
         setScore(s => ({ ...s, draws: s.draws + 1 }));
+        setP1Streak(0);
+        setP2Streak(0);
         playSound('draw');
+        vibrate('normal');
       }
 
       // Reset for next round automatically
@@ -74,13 +83,17 @@ const TwoPlayerGame: React.FC = () => {
         
         if (outcome === 'win') {
           setScore(s => ({ ...s, p1: s.p1 + 1 }));
+          setP1Streak(s => s + 1);
+          setP2Streak(0);
         } else {
           setScore(s => ({ ...s, p2: s.p2 + 1 }));
+          setP2Streak(s => s + 1);
+          setP1Streak(0);
         }
         playSound('win');
         
         setShowResult(true);
-        vibrate();
+        vibrate('normal');
 
         setTimeout(() => {
           setP1Move(null);
@@ -142,8 +155,39 @@ const TwoPlayerGame: React.FC = () => {
         <div className="w-11" /> {/* Spacer */}
       </div>
 
+      {/* STREAKS LAYER */}
+      <div className="absolute top-[calc(50%-4rem)] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none rotate-180">
+        <AnimatePresence>
+          {p2Streak > 1 && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0, y: -10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0, opacity: 0, y: -10 }}
+              className="bg-white/20 backdrop-blur-md px-4 py-1 rounded-full border border-white/10 shadow-lg pointer-events-auto"
+            >
+              <span className="font-bold text-white tracking-widest uppercase text-xs">{t('game_streak')} x{p2Streak}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="absolute top-[calc(50%+4rem)] left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+        <AnimatePresence>
+          {p1Streak > 1 && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0, opacity: 0, y: 10 }}
+              className="bg-white/20 backdrop-blur-md px-4 py-1 rounded-full border border-white/10 shadow-lg pointer-events-auto"
+            >
+              <span className="font-bold text-white tracking-widest uppercase text-xs">{t('game_streak')} x{p1Streak}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* TOP HALF - PLAYER 2 (Rotated 180) */}
-      <div className="flex-1 bg-transparent relative rotate-180 flex flex-col justify-end p-6 pb-12">
+      <div className="flex-1 bg-transparent relative rotate-180 flex flex-col justify-end p-6 pb-6">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-10">
            {showResult && p2Move && (
              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
@@ -159,6 +203,8 @@ const TwoPlayerGame: React.FC = () => {
            )}
         </div>
 
+        <p className="text-center font-bold text-white/40 mb-4 uppercase tracking-widest text-xs relative z-10">{t('game_player_2')}</p>
+
         <div className="flex justify-between max-w-sm mx-auto w-full gap-4 relative z-10">
           {MOVES.map((m) => (
             <button
@@ -173,11 +219,10 @@ const TwoPlayerGame: React.FC = () => {
             </button>
           ))}
         </div>
-        <p className="text-center font-bold text-white/40 mt-6 uppercase tracking-widest text-xs relative z-10">{t('game_player_2')}</p>
       </div>
 
       {/* BOTTOM HALF - PLAYER 1 */}
-      <div className="flex-1 bg-transparent relative flex flex-col justify-end p-6 pb-12">
+      <div className="flex-1 bg-transparent relative flex flex-col justify-end p-6 pb-6">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-10">
            {showResult && p1Move && (
              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
@@ -193,7 +238,8 @@ const TwoPlayerGame: React.FC = () => {
            )}
         </div>
 
-        <p className="text-center font-bold text-white/40 mb-6 uppercase tracking-widest text-xs relative z-10">{t('game_player_1')}</p>
+        <p className="text-center font-bold text-white/40 mb-4 uppercase tracking-widest text-xs relative z-10">{t('game_player_1')}</p>
+
         <div className="flex justify-between max-w-sm mx-auto w-full gap-4 relative z-10">
           {MOVES.map((m) => (
             <button

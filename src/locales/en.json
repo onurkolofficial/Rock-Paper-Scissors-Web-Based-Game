@@ -26,6 +26,7 @@
   "game_rock": "Rock",
   "game_paper": "Paper",
   "game_scissors": "Scissors",
+  "game_streak": "Streak",
   "game_win": "You Win!",
   "game_lose": "You Lose!",
   "game_draw": "Draw!",
@@ -41,5 +42,8 @@
   "no": "No",
   "waiting_for_opponent": "Waiting for opponent...",
   "tap_to_play": "Tap to play",
-  "guest": "Guest"
+  "guest": "Guest",
+  "login_error_title": "Login Failed",
+  "login_error_message": "Could not sign in with Google Play Games. Please check your internet connection and try again.",
+  "ok": "OK"
 }

@@ -26,6 +26,7 @@
   "game_rock": "Taş",
   "game_paper": "Kağıt",
   "game_scissors": "Makas",
+  "game_streak": "Seri",
   "game_win": "Kazandınız!",
   "game_lose": "Kaybettiniz!",
   "game_draw": "Berabere!",
@@ -41,5 +42,8 @@
   "no": "Hayır",
   "waiting_for_opponent": "Rakip bekleniyor...",
   "tap_to_play": "Oynamak için dokun",
-  "guest": "Misafir"
+  "guest": "Misafir",
+  "login_error_title": "Giriş Başarısız",
+  "login_error_message": "Google Play Oyunlar ile giriş yapılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+  "ok": "Tamam"
 }

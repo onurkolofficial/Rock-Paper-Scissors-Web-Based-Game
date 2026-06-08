@@ -28,6 +28,11 @@ const StatsMenu: React.FC = () => {
     navigate('menu');
   };
 
+  const toUpper = (str: string) => {
+    if (!str) return '';
+    return str.toLocaleUpperCase('tr-TR');
+  };
+
   return (
     <div className="flex flex-col min-h-[100dvh] w-full text-slate-100 relative overflow-hidden font-sans bg-transparent">
       {/* Header */}
@@ -39,7 +44,7 @@ const StatsMenu: React.FC = () => {
           <ArrowLeft className="w-6 h-6 text-slate-300" />
         </button>
         <h1 className="text-xl font-bold uppercase tracking-wide ml-4 text-slate-100">
-          {t('stats_title')}
+          {toUpper(t('stats_title'))}
         </h1>
       </div>
 

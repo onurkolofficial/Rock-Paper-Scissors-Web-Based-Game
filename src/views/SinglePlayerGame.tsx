@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Hand, HandMetal, Scissors } from 'lucide-react';
 
 const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
-  if (move === 'rock') return <HandMetal className={className} />;
-  if (move === 'paper') return <Hand className={className} />;
-  return <Scissors className={className} />;
+  if (move === 'rock') return <img src="/gfx_stone.png" alt="Rock" className={className} />;
+  if (move === 'paper') return <img src="/gfx_paper.png" alt="Paper" className={className} />;
+  return <img src="/gfx_scissors.png" alt="Scissors" className={className} />;
 };
 
 const SinglePlayerGame: React.FC = () => {
@@ -21,6 +21,7 @@ const SinglePlayerGame: React.FC = () => {
   const [computerMove, setComputerMove] = useState<Move | null>(null);
   const [result, setResult] = useState<Result>(null);
   const [score, setScore] = useState({ player: 0, computer: 0, draws: 0 });
+  const [streak, setStreak] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const handleExitClick = () => {
@@ -48,17 +49,22 @@ const SinglePlayerGame: React.FC = () => {
       
       if (matchResult === 'win') {
         setScore(s => ({ ...s, player: s.player + 1 }));
+        setStreak(s => s + 1);
         localStorage.setItem('sps_stats_wins', String(Number(localStorage.getItem('sps_stats_wins') || 0) + 1));
         playSound('win');
-        vibrate(); // Vibrate again on win
+        vibrate('normal');
       } else if (matchResult === 'lose') {
         setScore(s => ({ ...s, computer: s.computer + 1 }));
+        setStreak(0);
         localStorage.setItem('sps_stats_losses', String(Number(localStorage.getItem('sps_stats_losses') || 0) + 1));
         playSound('lose');
+        vibrate('long');
       } else {
         setScore(s => ({ ...s, draws: s.draws + 1 }));
+        setStreak(0);
         localStorage.setItem('sps_stats_draws', String(Number(localStorage.getItem('sps_stats_draws') || 0) + 1));
         playSound('draw');
+        vibrate('normal');
       }
       
       setTimeout(() => {
@@ -171,6 +177,18 @@ const SinglePlayerGame: React.FC = () => {
 
       {/* Controls Container */}
       <div className="absolute bottom-0 w-full p-6 pb-8 bg-black/40 backdrop-blur-xl border-t border-white/5 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <AnimatePresence>
+          {streak > 1 && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0, opacity: 0, y: 20 }}
+              className="absolute -top-6 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md px-4 py-1 rounded-full border border-white/10 shadow-lg"
+            >
+              <span className="font-bold text-white tracking-widest uppercase text-xs">{t('game_streak')} x{streak}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="flex justify-between max-w-sm mx-auto">
           {MOVES.map((m) => (
             <button

@@ -1,0 +1,8 @@
+{
+  "name": "Taş Kağıt Makas",
+  "description": "Rock Paper Scissors with Single and Two Player modes, optimized for mobile with Capacitor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

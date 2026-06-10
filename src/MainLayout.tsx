@@ -9,6 +9,8 @@ import SettingsMenu from './views/SettingsMenu';
 import StatsMenu from './views/StatsMenu';
 import SinglePlayerGame from './views/SinglePlayerGame';
 import TwoPlayerGame from './views/TwoPlayerGame';
+import LeaderboardMenu from './views/LeaderboardMenu';
+import AchievementsMenu from './views/AchievementsMenu';
 import ConfirmModal from './components/ConfirmModal';
 
 const MainLayout: React.FC = () => {
@@ -38,6 +40,8 @@ const MainLayout: React.FC = () => {
       case 'multi': return <TwoPlayerGame />;
       case 'settings': return <SettingsMenu />;
       case 'stats': return <StatsMenu />;
+      case 'leaderboard': return <LeaderboardMenu />;
+      case 'achievements': return <AchievementsMenu />;
       default: return <MainMenu />;
     }
   };

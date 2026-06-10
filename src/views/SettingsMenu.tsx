@@ -4,7 +4,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAppNavigation } from '../contexts/AppContext';
 import { motion } from 'motion/react';
 import { ArrowLeft, Volume2, VolumeX, Vibrate, VibrateOff, Info } from 'lucide-react';
-import { APP_VERSION } from '../version';
+import { GAME_VERSION } from '../version';
 
 const SettingsMenu: React.FC = () => {
   const { t } = useTranslation();
@@ -131,7 +131,7 @@ const SettingsMenu: React.FC = () => {
             {t('about_developer')} <span className="font-bold text-white">Onur KOL</span>
           </p>
           <p className="text-xs font-mono tracking-widest text-white/40 mt-1 uppercase">
-            {t('about_version')} {APP_VERSION}
+            {t('about_version')} {GAME_VERSION}
           </p>
         </div>
       </div>

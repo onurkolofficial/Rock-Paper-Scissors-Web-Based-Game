@@ -1,1 +1,3 @@
-export const APP_VERSION = '3.0.0.15';
+const VERSION_CODE = "16"
+const VERSION_NAME = "3.0.5"
+export const GAME_VERSION = VERSION_NAME + '.' + VERSION_CODE;

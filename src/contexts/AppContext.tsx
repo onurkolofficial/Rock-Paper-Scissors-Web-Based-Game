@@ -3,7 +3,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { showInterstitialAd } from '../utils/ads';
 
-export type Screen = 'menu' | 'single' | 'multi' | 'settings' | 'stats';
+export type Screen = 'menu' | 'single' | 'multi' | 'settings' | 'stats' | 'leaderboard' | 'achievements';
 
 interface AppContextType {
   currentScreen: Screen;
@@ -31,7 +31,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Google Play Integration
       // Initialize
       GoogleSignIn.initialize({
-        clientId: '455623071673-56djgd6psbpeu8eovc3tvjm5v1omrlkg.apps.googleusercontent.com',
+        clientId: '455623071673-o47c5upkvunf797g9vdtbsjrub59lb00.apps.googleusercontent.com',
         scopes: ['profile', 'email', 'https://www.googleapis.com/auth/games'],
       });
     } catch (e) {

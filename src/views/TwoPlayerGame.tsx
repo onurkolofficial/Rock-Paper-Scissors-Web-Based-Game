@@ -5,6 +5,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { Move, Result, determineWinner, MOVES } from '../model/GameModel';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Hand, HandMetal, Scissors } from 'lucide-react';
+import { checkTwoPlayerAchievements } from '../utils/achievements';
 
 const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
   if (move === 'rock') return <img src="/gfx_stone.png" alt="Rock" className={className} />;
@@ -14,7 +15,7 @@ const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
 
 const TwoPlayerGame: React.FC = () => {
   const { t } = useTranslation();
-  const { setConfirmExit } = useAppNavigation();
+  const { setConfirmExit, setAchievementToast } = useAppNavigation();
   const { vibrate, playSound } = useSettings();
 
   const [p1Move, setP1Move] = useState<Move | null>(null);
@@ -27,6 +28,13 @@ const TwoPlayerGame: React.FC = () => {
   const [p1Streak, setP1Streak] = useState(0);
   const [p2Streak, setP2Streak] = useState(0);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    // 7. görev İki oyunculu mod aktif edildiğinde/açıldığında kilidi açılır
+    checkTwoPlayerAchievements((ach) => {
+      setAchievementToast(ach);
+    });
+  }, [setAchievementToast]);
 
   const handleExitClick = () => {
     playSound('click');

@@ -10,7 +10,7 @@ import { showBanner, hideBanner } from '../utils/ads';
 
 const MainMenu: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { navigate, userName, setUserName, loginWithGoogle } = useAppNavigation();
+  const { navigate, userName, setUserName, userImageUrl, setUserImageUrl, loginWithGoogle } = useAppNavigation();
 
   const { toggleSound, playSound } = useSettings();
 
@@ -45,6 +45,7 @@ const MainMenu: React.FC = () => {
   const handleGoogleLogoutMock = () => {
     playSound('click');
     setUserName('');
+    setUserImageUrl('');
   };
 
   const navigateWithSound = (view: any) => {
@@ -57,8 +58,23 @@ const MainMenu: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md text-center mb-12 z-10"
+        className="w-full max-w-md flex flex-col items-center text-center mb-10 z-10"
       >
+        {userName && userImageUrl && (
+          <motion.div 
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="mb-4 relative group"
+          >
+            <div className="absolute inset-0 bg-yellow-400/25 rounded-full blur-md group-hover:blur-lg transition-all duration-300" />
+            <img 
+              src={userImageUrl} 
+              alt={userName}
+              referrerPolicy="no-referrer"
+              className="w-16 h-16 rounded-full border-2 border-yellow-400/60 shadow-xl object-cover relative z-10"
+            />
+          </motion.div>
+        )}
         <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-2">
           {toUpper(t('app_name'))}
         </h1>
@@ -102,9 +118,23 @@ const MainMenu: React.FC = () => {
         {userName ? (
           <div className="flex flex-col bg-black/40 border border-white/5 p-4 rounded-2xl shadow-xl mt-1 backdrop-blur-sm">
             <div className="flex justify-between items-center mb-4">
-              <div className="flex flex-col">
-                <span className="text-white/50 text-[10px] font-bold tracking-widest uppercase mb-1">Google Play</span>
-                <span className="font-bold tracking-wide text-white text-sm">{userName}</span>
+              <div className="flex items-center gap-3">
+                {userImageUrl ? (
+                  <img 
+                    src={userImageUrl} 
+                    alt={userName} 
+                    referrerPolicy="no-referrer"
+                    className="w-10 h-10 rounded-full border border-yellow-400/30 object-cover shadow-sm bg-black/30" 
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-lg">
+                    👤
+                  </div>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-white/50 text-[10px] font-bold tracking-widest uppercase mb-0.5">Google Play</span>
+                  <span className="font-bold tracking-wide text-white text-sm">{userName}</span>
+                </div>
               </div>
               <button 
                 onClick={handleGoogleLogoutMock}

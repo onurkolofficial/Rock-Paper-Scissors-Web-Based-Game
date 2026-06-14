@@ -3,7 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import tr from './locales/tr.json';
 import en from './locales/en.json';
 
-const savedLang = localStorage.getItem('sps_lang') || 'tr';
+const savedLang = localStorage.getItem('sps_lang') || 'en';
 
 i18n
   .use(initReactI18next)
@@ -13,7 +13,7 @@ i18n
       tr: { translation: tr }
     },
     lng: savedLang,
-    fallbackLng: 'tr',
+    fallbackLng: 'en',
     interpolation: {
       escapeValue: false
     }

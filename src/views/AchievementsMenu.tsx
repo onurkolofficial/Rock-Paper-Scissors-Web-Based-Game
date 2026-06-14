@@ -4,36 +4,22 @@ import { useAppNavigation } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion } from 'motion/react';
 import { ArrowLeft, Target, Award, Lock } from 'lucide-react';
-
-const MOCK_ACHIEVEMENTS = [
-  { id: 'a1', title: 'İlk Galibiyet', desc: 'Bilgisayara karşı ilk maçını kazan.', icon: '🎉', isUnlocked: false },
-  { id: 'a2', title: 'Seri Katil', desc: 'Art arda 3 maç kazan.', icon: '🔥', isUnlocked: false },
-  { id: 'a3', title: 'Beraberlik Ustası', desc: 'Toplam 10 kez berabere kal.', icon: '🤝', isUnlocked: false },
-  { id: 'a4', title: 'Taşın Gücü', desc: 'Sadece taş kullanarak kazan.', icon: '🪨', isUnlocked: false },
-  { id: 'a5', title: 'Usta Oyuncu', desc: 'Toplam 100 galibiyet elde et.', icon: '👑', isUnlocked: false },
-];
+import { ACHIEVEMENTS_LIST, isAchievementUnlocked } from '../utils/achievements';
 
 const AchievementsMenu: React.FC = () => {
   const { t } = useTranslation();
   const { navigate } = useAppNavigation();
   const { playSound } = useSettings();
   
-  const [achievements, setAchievements] = useState(MOCK_ACHIEVEMENTS);
+  const [achievements, setAchievements] = useState(ACHIEVEMENTS_LIST);
+  const [filter, setFilter] = useState<'all' | 'completed' | 'locked'>('all');
 
   useEffect(() => {
-    // Demo purposes: unlock logic based on local storage
-    const wins = Number(localStorage.getItem('sps_stats_wins') || 0);
-    const draws = Number(localStorage.getItem('sps_stats_draws') || 0);
-    
-    setAchievements(prev => prev.map(ach => {
-      let unlocked = false;
-      if (ach.id === 'a1' && wins >= 1) unlocked = true;
-      if (ach.id === 'a2' && wins >= 3) unlocked = true; // Simplified for demo
-      if (ach.id === 'a3' && draws >= 10) unlocked = true;
-      if (ach.id === 'a5' && wins >= 100) unlocked = true;
-      
-      return { ...ach, isUnlocked: unlocked };
-    }));
+    // Read cached unlocked states without making redundant native API requests
+    setAchievements(prev => prev.map(ach => ({
+      ...ach,
+      isUnlocked: isAchievementUnlocked(ach.id)
+    })));
   }, []);
 
   const handleBack = () => {
@@ -41,14 +27,25 @@ const AchievementsMenu: React.FC = () => {
     navigate('menu');
   };
 
+  const handleFilterClick = (type: 'all' | 'completed' | 'locked') => {
+    playSound('click');
+    setFilter(type);
+  };
+
   const unlockedCount = achievements.filter(a => a.isUnlocked).length;
   const totalCount = achievements.length;
   const progressPercent = (unlockedCount / totalCount) * 100;
 
+  const filteredAchievements = achievements.filter(ach => {
+    if (filter === 'completed') return ach.isUnlocked;
+    if (filter === 'locked') return !ach.isUnlocked;
+    return true;
+  });
+
   return (
     <div className="flex flex-col h-[100dvh] w-full text-slate-100 p-6 relative overflow-hidden font-sans bg-transparent">
       {/* Header */}
-      <div className="flex items-center mb-6 z-10 pt-4">
+      <div className="flex items-center mb-6 z-10 pt-4 shrink-0">
         <button 
           onClick={handleBack}
           className="p-2 rounded-full hover:bg-white/10 active:bg-white/5 transition mr-4"
@@ -69,12 +66,12 @@ const AchievementsMenu: React.FC = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex-1 w-full max-w-md mx-auto flex flex-col z-10"
+        className="flex-1 w-full max-w-md mx-auto flex flex-col z-10 min-h-0"
       >
         {/* Progress Bar */}
-        <div className="bg-black/40 border border-white/5 p-4 rounded-2xl mb-6 backdrop-blur-sm">
+        <div className="bg-black/40 border border-white/5 p-4 rounded-2xl mb-4 backdrop-blur-sm shrink-0">
           <div className="flex justify-between items-end mb-2">
-            <span className="text-xs font-bold tracking-widest text-white/50 uppercase">Tamamlanan</span>
+            <span className="text-xs font-bold tracking-widest text-white/50 uppercase">{t('filter_completed')}</span>
             <span className="text-xl font-black text-yellow-400">{unlockedCount} <span className="text-sm text-white/30">/ {totalCount}</span></span>
           </div>
           <div className="w-full bg-white/5 rounded-full h-3 overflow-hidden">
@@ -87,14 +84,43 @@ const AchievementsMenu: React.FC = () => {
           </div>
         </div>
 
-        {/* Connection Notice */}
-        <div className="bg-blue-500/10 border border-blue-500/20 text-blue-300 p-3 rounded-xl text-xs flex flex-col gap-1 mb-4 shadow-lg backdrop-blur-sm shrink-0">
-          <span className="font-bold uppercase tracking-widest">Geliştirici Notu</span>
-          <span className="text-white/70">Bu hedefler Demo amaçlıdır. Google Play Games Entegrasyonu ile sunucudan çekilmek üzere hazırlanmıştır.</span>
+        {/* Filter Buttons */}
+        <div className="flex gap-2 mb-4 p-1 bg-black/40 border border-white/5 rounded-xl shrink-0">
+          <button
+            onClick={() => handleFilterClick('all')}
+            className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition duration-200 ${
+              filter === 'all' 
+                ? 'bg-yellow-400 text-slate-900 shadow-[0_2px_10px_rgba(250,204,21,0.3)]' 
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {t('filter_all')}
+          </button>
+          <button
+            onClick={() => handleFilterClick('completed')}
+            className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition duration-200 ${
+              filter === 'completed' 
+                ? 'bg-yellow-400 text-slate-900 shadow-[0_2px_10px_rgba(250,204,21,0.3)]' 
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {t('filter_completed')}
+          </button>
+          <button
+            onClick={() => handleFilterClick('locked')}
+            className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider rounded-lg transition duration-200 ${
+              filter === 'locked' 
+                ? 'bg-yellow-400 text-slate-900 shadow-[0_2px_10px_rgba(250,204,21,0.3)]' 
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {t('filter_locked')}
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto space-y-3 pb-10 scrollbar-hide">
-          {achievements.map((ach, idx) => (
+        {/* List scroll container */}
+        <div className="flex-1 overflow-y-auto space-y-3 pb-10 scrollbar-hide touch-pan-y">
+          {filteredAchievements.map((ach, idx) => (
             <motion.div
               key={ach.id}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -119,7 +145,7 @@ const AchievementsMenu: React.FC = () => {
               <div className="flex flex-col flex-1">
                 <div className="flex justify-between items-center mb-1">
                   <span className={`font-bold tracking-wide ${ach.isUnlocked ? 'text-yellow-400' : 'text-white/80'}`}>
-                    {ach.title}
+                    {t(ach.titleKey)}
                   </span>
                   {ach.isUnlocked ? (
                     <Award className="w-4 h-4 text-yellow-400" />
@@ -128,7 +154,7 @@ const AchievementsMenu: React.FC = () => {
                   )}
                 </div>
                 <span className="text-[10px] uppercase tracking-widest text-white/50 leading-relaxed">
-                  {ach.desc}
+                  {t(ach.descKey)}
                 </span>
               </div>
             </motion.div>

@@ -1,157 +1,149 @@
-# Google Play Games Integration / Google Play Games Entegrasyonu
+# Google Play Games Integration Guide / Google Play Games Entegrasyon Rehberi
 
-Below you can find the step-by-step guide on how to integrate Google Play Games Services into your Capacitor/React application. / Aşağıda Google Play Games Hizmetleri'ni Capacitor/React uygulamanıza nasıl entegre edeceğinizi adım adım anlatan rehberi bulabilirsiniz.
+This document explains how to set up Google Play Games Services, leaderboards, and achievements, and how they are integrated into our React/Capacitor application using the open-source `@openforge/capacitor-game-services` plugin.
 
 ---
 
 ## 🇬🇧 English Guide
 
-### 1. Google Cloud Console Setup
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project or select an existing one.
-3. Enable the **Google Play Game Services API**.
-4. Go to **Credentials**, create an **OAuth 2.0 Client ID** for "Android" (and "Web application" if you want web fallback). You will need your package name and SHA-1 certificate fingerprint.
+### 0. 🛠️ Using `@openforge/capacitor-game-services`
+We have transitioned from the private sponsor-only Capawesome plugin to the robust, open-source **`@openforge/capacitor-game-services`** package.
 
-### 2. Google Play Console Setup
-1. Go to the [Google Play Console](https://play.google.com/console/).
-2. Select your app and navigate to **Play Games Services** -> **Setup and management** -> **Configuration**.
-3. Choose "Yes, my game already uses Google APIs" and select your Cloud project.
-4. Add credentials for your Android app using the OAuth client you created.
-5. Add leaderboards, achievements, etc., if needed, and publish your Play Games configuration.
-
-### 3. Install Capacitor Plugins
-You will need a community plugin to handle Google Sign-In and Play Games natively on Android:
-```bash
-npm install @capawesome/capacitor-google-sign-in
-npx cap sync
-```
-
-### 4. Implementation in React
-In your `AppContext.tsx` or auth logic, initialize the Google Sign-In with your web client ID from Google Cloud:
-
-```typescript
-import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
-
-// Initialize
-GoogleSignIn.initialize({
-  clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-  scopes: ['profile', 'email', 'https://www.googleapis.com/auth/games'],
-});
-
-// Login Function
-const loginWithGoogle = async () => {
-  try {
-    const result = await GoogleSignIn.signIn();
-    console.log("Logged in:", result.user?.displayName);
-    // You can now set the userName in your AppContext
-  } catch (error) {
-    console.error("Login failed:", error);
-  }
-};
-```
-
-### 5. Common Errors and Solutions
-
-**Error:** `"io.capawesome.capacitorjs.plugins.googlesignin.classes.CustomException: The user canceled the sign-in flow."`
-
-This error can occur when the user genuinely cancels the sign-in, but it is also thrown as a default error by Android when there is a **configuration issue**. Check the following to resolve:
-
-1. **Incorrect Client ID:** The Client ID you provide to `GoogleSignIn.initialize()` must be the one created for "Web application" in Google Cloud, *not* the one for "Android".
-2. **Missing SHA-1 Key:** When testing on Android, the **SHA-1** fingerprint of the keystore (debug or release) you signed the APK with might not be added to the **Android** type OAuth Client ID in the Google Cloud Console. Run `cd android && ./gradlew signingReport` in your terminal to find the correct SHA-1 hash and add it to the Google Cloud Console.
-3. **Missing Support Email:** Ensure you have configured a support platform email for your app in the "OAuth consent screen" section of the Google Cloud Console.
-4. **capacitor.config.ts Settings:** You might not have added the Web Client ID to the plugin settings in the Capacitor configuration file:
-   ```typescript
-   // capacitor.config.ts
-   import type { CapacitorConfig } from '@capacitor/cli';
-
-   const config: CapacitorConfig = {
-     appId: 'com.your.bundle.id',
-     appName: 'YourApp',
-     webDir: 'dist',
-     plugins: {
-       GoogleSignIn: {
-         clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-         scopes: ['profile', 'email'],
-         forceCodeForRefreshToken: true,
-       },
-     },
-   };
-   export default config;
-   ```
+* **Package name:** `@openforge/capacitor-game-services`
+* **Seamless Web Support:** It comes with an integrated Web/JS fallback mock out-of-the-box. The codebase compiles, lints, and runs perfectly on both browser environments (web preview) and native devices without needing any local stubs or private registry tokens.
 
 ---
 
-## 🇹🇷 Türkçe Rehber
+### 1. Google Cloud Console Setup
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Select your Google Play Game project.
+3. Go to **Credentials**, ensure you have:
+   - An **OAuth 2.0 Web Application Client ID** (used inside the React code to initialize Google Sign-In).
+   - An **OAuth 2.0 Android Client ID** (used by Google Play to identify your signed APK/AAB).
+4. Ensure your app's package name (`com.onurkolofficial.spsgame`) and SHA-1 fingerprint are correctly registered.
 
-### 1. Google Cloud Console Kurulumu
-1. [Google Cloud Console](https://console.cloud.google.com/)'a gidin.
-2. Yeni bir proje oluşturun veya var olanı seçin.
-3. **Google Play Game Services API**'sini etkinleştirin.
-4. **Kimlik Bilgileri (Credentials)** bölümüne gidip, "Android" için (ve web'de çalışması için "Web application" için) bir **OAuth 2.0 İstemci Kimliği (Client ID)** oluşturun. Uygulamanızın paket adına ve SHA-1 sertifika parmak izine ihtiyacınız olacak.
+### 2. Google Play Console Setup (Play Games Services)
+1. Go to the [Google Play Console](https://play.google.com/console/) and select your game.
+2. In the left menu, go to **Play Games Services** -> **Setup and management** -> **Configuration**.
+3. Choose "Yes, my game already uses Google APIs" and link your Google Cloud project.
+4. **Leaderboards Setting:**
+   - Go to **Play Games Services** -> **Leaderboards** -> **Create leaderboard**.
+   - Set the name (e.g., "Global High Scores") and format.
+   - Copy the generated **Leaderboard ID** (starts with `CgkI...`).
+5. **Achievements Setting:**
+   - Go to **Play Games Services** -> **Achievements** -> **Create achievement**.
+   - Create achievements to match your goals (e.g., First Win, Streak Winner, Rock Power).
+   - Copy the generated **Achievement IDs** (each starts with `CgkI...`).
+6. Publish your Play Games configuration.
 
-### 2. Google Play Console Kurulumu
-1. [Google Play Console](https://play.google.com/console/)'a gidin.
-2. Uygulamanızı seçin ve **Play Games Hizmetleri** -> **Kurulum ve yönetim** -> **Yapılandırma** sekmesine gidin.
-3. "Evet, oyunum halihazırda Google API'lerini kullanıyor" seçeneğini seçip Cloud projenizi bağlayın.
-4. Cloud üzerinde oluşturduğunuz OAuth istemcisini kullanarak Android uygulamanız için kimlik bilgilerini ekleyin.
-5. Gerekirse liderlik tabloları (leaderboards), başarılar (achievements) ekleyin ve Play Games yapılandırmanızı yayınlayın.
+### 3. Integrating the IDs into the Code
 
-### 3. Capacitor Eklentilerini Kurma
-Android'de Google Oturum Açma ve Play Games'i yerel (native) olarak yönetmek için bir topluluk eklentisine ihtiyacınız olacak:
-```bash
-npm install @capawesome/capacitor-google-sign-in
-npx cap sync
-```
-
-### 4. React İçerisinde Uygulama
-`AppContext.tsx` veya yetkilendirme (auth) mantığınızda, Google Cloud'dan aldığınız **WEB İSTEMCİ KİMLİĞİNİZ** (Android istemci kimliği değil!) ile Google Oturum Açma'yı başlatın:
+#### 🏆 Leaderboards Integration
+Open `/src/views/LeaderboardMenu.tsx`. Replace `'CgkIua-BqqENEAIQAQ'` with your actual **Leaderboard ID** from Google Play Console (already configured as default for "Onur KOL"):
 
 ```typescript
-import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+// /src/views/LeaderboardMenu.tsx
+import { GameServices } from '@openforge/capacitor-game-services';
 
-// Başlatma (DİKKAT: Buraya ANDROID değil, WEB Client ID yazılmalıdır)
-GoogleSignIn.initialize({
-  clientId: 'SİZİN_WEB_CLIENT_ID_NİZ.apps.googleusercontent.com',
-  scopes: ['profile', 'email', 'https://www.googleapis.com/auth/games'],
+await GameServices.submitScore({
+  leaderboardId: 'CgkIua-BqqENEAIQAQ', // Your real leaderboard ID
+  score: score
 });
-
-// Giriş Fonksiyonu
-const loginWithGoogle = async () => {
-  try {
-    const result = await GoogleSignIn.signIn();
-    console.log("Giriş yapıldı:", result.user?.displayName);
-    // Artık userName bilginizi AppContext içinde güncelleyebilirsiniz
-  } catch (error) {
-    console.error("Giriş başarısız:", error);
-  }
-};
 ```
 
-### 5. Sık Karşılaşılan Hatalar ve Çözümleri
+#### 🎯 Achievements & Multi-language Integration
+Open `/src/views/AchievementsMenu.tsx`. Link your Google Play **Achievement IDs** into the `ACHIEVEMENTS_LIST` array, utilizing translation keys:
 
-**Hata:** `"io.capawesome.capacitorjs.plugins.googlesignin.classes.CustomException: The user canceled the sign-in flow."`
+```typescript
+// /src/views/AchievementsMenu.tsx
+const ACHIEVEMENTS_LIST = [
+  { id: 't1', playGamesId: 'CgkIua-BqqENEAIQBQ', titleKey: 'ach_t1_title', descKey: 'ach_t1_desc', icon: '🏆', isUnlocked: false},
+  { id: 't2', playGamesId: 'CgkIua-BqqENEAIQBA', titleKey: 'ach_t2_title', descKey: 'ach_t2_desc', icon: '🔥', isUnlocked: false},
+  // ...
+];
+```
 
-Bu hata kullanıcı giriş yapmaktan gerçekten vazgeçtiğinde çıkabileceği gibi, **kurulum eksikliği** olduğunda Android tarafından varsayılan hata olarak fırlatılır. Çözüm için aşağıdakileri kontrol edin:
+The translation values are dynamically fetched from the `/src/locales/en.json` and `/src/locales/tr.json` files, preventing any hardcoded text inside the views.
 
-1. **Yanlış Client ID Kullanımı:** `GoogleSignIn.initialize()` içerisine yazdığınız Client ID, Google Cloud'da "Android" için oluşturulan *değil*, "Web application (Web Uygulaması)" için oluşturulan Client ID olmalıdır.
-2. **Eksik SHA-1 Anahtarı:** Android üzerinde test yaparken APK'yı imzaladığınız keystore'un (debug veya release) **SHA-1** parmak izi, Google Cloud Console'daki **Android** türündeki OAuth Client ID içerisine eklenmemiş olabilir. Terminalinizde `cd android && ./gradlew signingReport` komutunu çalıştırarak doğru SHA-1 şifresini bulun ve Google Cloud Console'a ekleyin.
-3. **Destek E-postası Eksikliği:** Google Cloud Console'da "OAuth consent screen (OAuth onay ekranı)" bölümünde uygulamanız için bir destek e-postası (support platform email) belirlediğinizden emin olun.
-4. **capacitor.config.ts Ayarları:** Capacitor konfigürasyon dosyasında plugin ayarlarına Web Client ID'yi eklememiş olabilirsiniz:
-   ```typescript
-   // capacitor.config.ts
-   import type { CapacitorConfig } from '@capacitor/cli';
+### 4. API & Integration Methods Used
 
-   const config: CapacitorConfig = {
-     appId: 'com.your.bundle.id',
-     appName: 'YourApp',
-     webDir: 'dist',
-     plugins: {
-       GoogleSignIn: {
-         clientId: 'SİZİN_WEB_CLIENT_ID_NİZ.apps.googleusercontent.com',
-         scopes: ['profile', 'email'],
-         forceCodeForRefreshToken: true,
-       },
-     },
-   };
-   export default config;
-   ```
+* **Multi-language Support:** Display labels, developer notes, scoreboard headers, titles, and descriptions dynamically resolve depending on the user's settings via the `t` function wrapper.
+* **Automated Score Submission:** When a match is completed or the leaderboard mounts, the game calls `submitScoreToPlayGames(score)` which automatically syncs the user's score to Google Play Services.
+* **Automated Achievement Unlocking:** As local stats trigger milestone conditions (e.g. 1 win, 10 draws), `unlockPlayGamesAchievement(playGamesId)` is invoked dynamically to unlock the reward native on Google Play Games.
+* **Native Overlays:** The game provides premium floating primary action buttons allowing native players to open the beautiful high-fidelity official Play Games full-screen overlays:
+  * `GameServices.showLeaderboard({ leaderboardId: id })`
+  * `GameServices.showAchievements()`
+
+---
+
+## 🇹🇷 Türkçe Entegrasyon Rehberi
+
+Bu dosya; Google Play Oyun Hizmetleri (Play Games Services), liderlik tabloları ve başarıların nasıl kurulacağını ve bunların React/Capacitor uygulamasında nasıl çalıştığını anlatmaktadır. Entegrasyon, açık kaynaklı `@openforge/capacitor-game-services` eklentisiyle sağlanmıştır.
+
+### 0. 🛠️ `@openforge/capacitor-game-services` Kullanımı
+Özel sponsorluk gerektiren ücretli/kapalı Capawesome eklentisi yerine tamamen açık kaynaklı ve ücretsiz olan **`@openforge/capacitor-game-services`** paketi tercih edilmiştir.
+
+* **Paket Adı:** `@openforge/capacitor-game-services`
+* **Sorunsuz Web Desteği:** Kendiliğinden entegre edilmiş bir tarayıcı/web simülasyon mekanizmasına (Web/JS Fallback) sahiptir. Böylece kod tabanınız herhangi bir hata aramaya takılmadan, yerel köprü veya özel .npmrc kayıtlarına ihtiyaç duymadan tarayıcıda (web önizlemede) ve yerel test cihazlarında doğrudan %100 başarılı şekilde derlenir ve çalışır.
+
+---
+
+### 1. Google Cloud Console Kurulumu
+1. [Google Cloud Console](https://console.cloud.google.com/) adresine gidin.
+2. Google Play projenizi seçin.
+3. **Kimlik Bilgileri (Credentials)** sekmesinde aşağıdakilerin hazır olduğundan emin olun:
+   - **Web Uygulaması OAuth 2.0 İstemci Kimliği (Web Application Client ID):** Bunu React kodumuzda kullanıcı oturum açma akışını (`GoogleSignIn.initialize`) başlatmak için kullanıyoruz.
+   - **Android OAuth 2.0 İstemci Kimliği (Android Client ID):** Google Play'in, cihazda imzalı çalışan paketinizle eşleşmesini doğrulamak için arka planda kullanılır.
+4. Paket adınızın (`com.onurkolofficial.spsgame`) ve SHA-1 parmak izinizin Android istemcisine doğru şekilde tanımlandığından emin olun.
+
+### 2. Google Play Console Play Oyun Hizmetleri Kurulumu
+1. [Google Play Console](https://play.google.com/console/) adresine gidin ve oyununuzu seçin.
+2. Sol menüden **Play Games Hizmetleri (Play Games Services)** -> **Kurulum ve yönetim** -> **Yapılandırma** bölümüne girin.
+3. "Evet, oyunum zaten Google API'lerini kullanıyor" seçeneğiyle ilerleyip Google Cloud projenizi bağlayın.
+4. **Liderlik Tablo Oluşturma (Leaderboards):**
+   - **Liderlik Tabloları** -> **Liderlik tablosu oluştur** adımlarını izleyin.
+   - İsim verin (örn: "Küresel Skorlar") ve kaydedin.
+   - Console'da oluşan **Liderlik Tablosu Kimliğini (Leaderboard ID)** kopyalayın (genellikle `CgkI...` ile başlar).
+5. **Başarılar Oluşturma (Achievements):**
+   - **Başarılar** -> **Başarı oluştur** adımlarını izleyin.
+   - Oyundaki hedeflere uygun başarılar ekleyin (örn: İlk Galibiyet, Beraberlik Ustası, Taşın Gücü).
+   - Her bir başarı için üretilen **Başarı Kimliğini (Achievement ID)** kopyalayın (örn: `CgkI...`).
+6. Play Games yapılandırmanızı yayınlayın.
+
+### 3. Kimlik Bilgilerini Koda Bağlama
+
+#### 🏆 Sıralama Tablosu Entegrasyonu
+`/src/views/LeaderboardMenu.tsx` dosyasını açın. 'CgkIua-BqqENEAIQAQ' değerini Play Console'dan aldığınız gerçek **Leaderboard ID** ile değiştirin (Onur KOL için önceden tanımlanmıştır):
+
+```typescript
+// /src/views/LeaderboardMenu.tsx
+import { GameServices } from '@openforge/capacitor-game-services';
+
+await GameServices.submitScore({
+  leaderboardId: 'CgkIua-BqqENEAIQAQ', // Liderlik tablosu kimliğiniz
+  score: score
+});
+```
+
+#### 🎯 Başarılar Entegrasyonu
+`/src/views/AchievementsMenu.tsx` dosyasını açın. Play Console'dan aldığınız **Başarı Kimliklerini (Achievement IDs)** `ACHIEVEMENTS_LIST` dizisinde ilgili hedeflere atayıp, çeviri anahtarlarını belirtin:
+
+```typescript
+// /src/views/AchievementsMenu.tsx
+const ACHIEVEMENTS_LIST = [
+  { id: 't1', playGamesId: 'CgkIua-BqqENEAIQBQ', titleKey: 'ach_t1_title', descKey: 'ach_t1_desc', icon: '🏆', isUnlocked: false},
+  { id: 't2', playGamesId: 'CgkIua-BqqENEAIQBA', titleKey: 'ach_t2_title', descKey: 'ach_t2_desc', icon: '🔥', isUnlocked: false},
+  // ...
+];
+```
+
+Çeviriler doğrudan `/src/locales/en.json` ve `/src/locales/tr.json` dosyalarından okunarak, oyun içi dil seçimiyle tam entegre çalışır.
+
+### 4. Kullanılan Koda Dayalı Entegrasyonlar ve Metotlar
+
+* **Çoklu Dil Desteği:** Liderlik ekranı başlıkları, geliştirici notları ve başarıların isim/açıklamaları `t` fonksiyonu aracılığıyla seçili dile (Türkçe / İngilizce) duyarlı şekilde render edilir.
+* **Otomatik Skor Gönderimi:** Maçlar tamamlandığında veya sıralama menüsü yüklendiğinde, local'deki en güncel skor `submitScoreToPlayGames(score)` metodu ile Google Play sunucularına otomatik olarak senkronize edilir.
+* **Otomatik Başarı Kilidi Açma:** Oyuncunun yerel istatistikleri (galibiyet sayısı vb.) kilometre taşlarına ulaştığında, başarıların kilidi `unlockPlayGamesAchievement(playGamesId)` aracılığıyla Google Play profilinde otomatik olarak açılır.
+* **Yerel Arayüzler (Native Overlays):** Oyunda, sıralama ve başarılar sayfasında yer alan parlayan özel eylem butonları aracılığıyla, oyunculara doğrudan resmi Google Play Games tam ekran arayüzü gösterilir:
+  * `GameServices.showLeaderboard({ leaderboardId: id })`
+  * `GameServices.showAchievements()`

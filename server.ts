@@ -241,7 +241,6 @@ io.on("connection", (socket: Socket) => {
     const roomId = playerRoomMap.get(socket.id);
     if (!roomId) return;
     const room = rooms[roomId];
-    console.log('DEBUG SERVER: Client forced timeout event. Status '+room.status);
     if (room && room.status === 'playing') {
       evaluateRound(roomId, true);
     }

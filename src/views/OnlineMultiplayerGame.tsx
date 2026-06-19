@@ -73,9 +73,7 @@ const OnlineMultiplayerGame: React.FC = () => {
         });
       }, 1000);
     } else if (roundTimer === 0) {
-       console.log('DEBUG: Timer reached 0. Online . STATUS: ' + matchStatus);
        if (socket) {
-         console.log('DEBUG: Emitting timeout_from_client to server.');
          socket.emit('timeout_from_client');
        }
     }

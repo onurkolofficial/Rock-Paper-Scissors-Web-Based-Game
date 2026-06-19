@@ -152,7 +152,7 @@ const StatsMenu: React.FC = () => {
                   </h3>
                 </div>
                 <div className="flex gap-2 w-full">
-                  {onlineHistory.map((res, idx) => (
+                  {[...onlineHistory].reverse().map((res, idx) => (
                     <div 
                       key={idx} 
                       className={`flex-1 h-12 rounded-xl flex items-center justify-center border border-white/5 ${

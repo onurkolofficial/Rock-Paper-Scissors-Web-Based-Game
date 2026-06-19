@@ -22,7 +22,8 @@ interface Player {
 interface Room {
   id: string;
   players: Record<string, Player>;
-  status: 'waiting' | 'playing' | 'result';
+  status: 'waiting' | 'playing' | 'result' | 'game_over';
+  round: number;
 }
 
 const rooms: Record<string, Room> = {};
@@ -54,6 +55,7 @@ io.on("connection", (socket) => {
         joinedRoom = roomId;
         rooms[roomId].players[socket.id] = { socketId: socket.id, name: data.name || 'Guest', move: null, score: 0 };
         rooms[roomId].status = 'playing';
+        rooms[roomId].round = 1;
         playerRoomMap.set(socket.id, roomId);
         
         socket.join(roomId);
@@ -75,7 +77,8 @@ io.on("connection", (socket) => {
         players: {
           [socket.id]: { socketId: socket.id, name: data.name || 'Guest', move: null, score: 0 }
         },
-        status: 'waiting'
+        status: 'waiting',
+        round: 1
       };
       playerRoomMap.set(socket.id, newRoomId);
       socket.join(newRoomId);
@@ -128,15 +131,43 @@ io.on("connection", (socket) => {
             opponentScore: p1.score
           });
 
-          // Reset room for next round
-          setTimeout(() => {
-            if (rooms[roomId]) {
-              p1.move = null;
-              p2.move = null;
-              rooms[roomId].status = 'playing';
-              io.to(roomId).emit("next_round", {});
-            }
-          }, 3000);
+          if (room.round >= 10) {
+            room.status = 'game_over';
+            // Wait a few seconds to let players see the last round result before sending game over
+            setTimeout(() => {
+              if (rooms[roomId]) {
+                const p1FinalScore = rooms[roomId].players[p1.socketId].score;
+                const p2FinalScore = rooms[roomId].players[p2.socketId].score;
+                
+                io.to(p1.socketId).emit("game_over", {
+                  myScore: p1FinalScore,
+                  opponentScore: p2FinalScore,
+                  result: p1FinalScore > p2FinalScore ? 'win' : (p1FinalScore < p2FinalScore ? 'lose' : 'draw')
+                });
+                
+                io.to(p2.socketId).emit("game_over", {
+                  myScore: p2FinalScore,
+                  opponentScore: p1FinalScore,
+                  result: p2FinalScore > p1FinalScore ? 'win' : (p2FinalScore < p1FinalScore ? 'lose' : 'draw')
+                });
+                
+                delete rooms[roomId];
+                playerRoomMap.delete(p1.socketId);
+                playerRoomMap.delete(p2.socketId);
+              }
+            }, 3000);
+          } else {
+            // Reset room for next round
+            setTimeout(() => {
+              if (rooms[roomId]) {
+                p1.move = null;
+                p2.move = null;
+                rooms[roomId].round++;
+                rooms[roomId].status = 'playing';
+                io.to(roomId).emit("next_round", { round: rooms[roomId].round });
+              }
+            }, 3000);
+          }
         }
       }
     }

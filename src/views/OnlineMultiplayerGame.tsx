@@ -16,19 +16,20 @@ const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
 
 const OnlineMultiplayerGame: React.FC = () => {
   const { t } = useTranslation();
-  const { setConfirmExit, userName } = useAppNavigation();
+  const { setConfirmExit, userName, navigate } = useAppNavigation();
   const { playSound, vibrate } = useSettings();
 
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [matchStatus, setMatchStatus] = useState<'connecting' | 'waiting' | 'playing' | 'result'>('connecting');
+  const [matchStatus, setMatchStatus] = useState<'connecting' | 'waiting' | 'playing' | 'result' | 'game_over' | 'opponent_disconnected'>('connecting');
   const [roomId, setRoomId] = useState<string | null>(null);
+  const [rematchKey, setRematchKey] = useState(0);
+  const [finalResult, setFinalResult] = useState<'win' | 'lose' | 'draw' | null>(null);
   
   const [myMove, setMyMove] = useState<Move | null>(null);
   const [opponentMove, setOpponentMove] = useState<Move | null>(null);
   const [opponentName, setOpponentName] = useState<string>('Oyuncu');
   const [result, setResult] = useState<'win' | 'lose' | 'draw' | null>(null);
   const [score, setScore] = useState({ me: 0, opponent: 0 });
-  const [disconnectAlert, setDisconnectAlert] = useState(false);
 
   useEffect(() => {
     // Connect to Websocket
@@ -83,19 +84,40 @@ const OnlineMultiplayerGame: React.FC = () => {
       setResult(null);
     });
 
+    newSocket.on('game_over', (data) => {
+      setMatchStatus('game_over');
+      setFinalResult(data.result);
+    });
+
     newSocket.on('opponent_disconnected', () => {
-      setMatchStatus('connecting');
-      setDisconnectAlert(true);
+      setMatchStatus('opponent_disconnected');
     });
 
     return () => {
       newSocket.disconnect();
     };
-  }, [userName, playSound, vibrate, t, setConfirmExit]);
+  }, [rematchKey, userName, playSound, vibrate, t]);
 
   const handleExitClick = () => {
     playSound('click');
     setConfirmExit(true);
+  };
+
+  const handleRematch = () => {
+    playSound('click');
+    setMatchStatus('connecting');
+    setRoomId(null);
+    setMyMove(null);
+    setOpponentMove(null);
+    setResult(null);
+    setFinalResult(null);
+    setScore({ me: 0, opponent: 0 });
+    setRematchKey(prev => prev + 1);
+  };
+
+  const handleDirectExit = () => {
+    playSound('click');
+    navigate('menu');
   };
 
   const handleSelectMove = (m: Move) => {
@@ -282,15 +304,56 @@ const OnlineMultiplayerGame: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AlertModal 
-        isOpen={disconnectAlert} 
-        title={t('menu_online_multiplayer') || "Online"}
-        message={t('online_opponent_disconnect')}
-        onClose={() => {
-          setDisconnectAlert(false);
-          setConfirmExit(true);
-        }}
-      />
+      {/* Game Over / Opponent Disconnected Overlay */}
+      <AnimatePresence>
+        {(matchStatus === 'game_over' || matchStatus === 'opponent_disconnected') && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6"
+          >
+            <div className="text-center w-full max-w-sm flex flex-col gap-8">
+              {matchStatus === 'opponent_disconnected' ? (
+                <>
+                  <Wifi className="w-20 h-20 mx-auto text-red-500 mb-2 opacity-80" />
+                  <h2 className="text-3xl font-black text-white uppercase tracking-widest leading-tight">{t('online_opponent_disconnect') || 'Oyuncu Ayrıldı'}</h2>
+                </>
+              ) : (
+                <>
+                  <div className="w-24 h-24 mx-auto bg-white/10 rounded-full flex items-center justify-center border-4 border-white/20 mb-2">
+                    <span className="text-4xl font-black text-white">
+                      {finalResult === 'win' ? '🏆' : (finalResult === 'lose' ? '💀' : '🤝')}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-4xl font-black text-white uppercase tracking-widest drop-shadow-lg">
+                      {finalResult === 'draw' ? t('game_draw') : (finalResult === 'win' ? t('game_win') : t('game_lose'))}
+                    </h2>
+                    <p className="text-white/50 text-sm tracking-widest uppercase">{t('online_match_finished') || 'Eşleşme Tamamlandı'}</p>
+                  </div>
+                </>
+              )}
+              
+              <div className="flex flex-col gap-4 w-full mt-4">
+                <button 
+                  onClick={handleRematch}
+                  className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-lg transition-all active:scale-95 bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:bg-blue-400"
+                >
+                  {t('online_new_match') || 'Yeni Eşleşme'}
+                </button>
+                <button 
+                  onClick={handleDirectExit}
+                  className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-lg transition-all active:scale-95 bg-white/10 text-white/50 hover:bg-white/20 hover:text-white"
+                >
+                  {t('exit') || 'Çıkış Yap'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

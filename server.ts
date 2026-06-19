@@ -56,12 +56,13 @@ io.on("connection", (socket) => {
         rooms[roomId].status = 'playing';
         playerRoomMap.set(socket.id, roomId);
         
+        socket.join(roomId);
+
         // Notify both players
         io.to(roomId).emit("match_found", {
           roomId,
           players: Object.values(rooms[roomId].players).map(p => ({ id: p.socketId, name: p.name, score: p.score }))
         });
-        socket.join(roomId);
         break;
       }
     }

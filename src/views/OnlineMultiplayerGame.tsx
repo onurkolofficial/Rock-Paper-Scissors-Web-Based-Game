@@ -223,6 +223,47 @@ const OnlineMultiplayerGame: React.FC = () => {
         </div>
       </div>
 
+      {/* Matchmaking Overlay */}
+      <AnimatePresence>
+        {(matchStatus === 'connecting' || matchStatus === 'waiting') && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-[#000000] flex flex-col items-center justify-center p-6"
+          >
+            <div className="absolute top-8 left-4">
+              <button 
+                onClick={handleExitClick}
+                className="p-3 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 active:scale-90 transition-all border border-red-900/30"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <motion.div 
+              animate={{ scale: [1, 1.1, 1] }} 
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="w-32 h-32 mb-8 bg-blue-500/10 rounded-full flex items-center justify-center border-4 border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.3)]"
+            >
+              <Wifi className={`w-16 h-16 ${matchStatus === 'connecting' ? 'text-blue-400' : 'text-yellow-400'} animate-pulse`} />
+            </motion.div>
+            
+            <h2 className="text-2xl font-bold text-white text-center tracking-widest mb-4 uppercase">
+              {matchStatus === 'connecting' ? t('online_connecting') : t('online_waiting')}
+            </h2>
+            <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+               <motion.div 
+                 className={`h-full ${matchStatus === 'connecting' ? 'bg-blue-500' : 'bg-yellow-500'}`}
+                 initial={{ width: "0%" }}
+                 animate={{ width: "100%" }}
+                 transition={{ duration: 2, repeat: Infinity }}
+               />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Central Result Overlay */}
       <AnimatePresence>
         {matchStatus === 'result' && result && (

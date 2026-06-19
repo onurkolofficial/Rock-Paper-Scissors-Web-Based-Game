@@ -30,6 +30,59 @@ const OnlineMultiplayerGame: React.FC = () => {
   const [opponentName, setOpponentName] = useState<string>('Oyuncu');
   const [result, setResult] = useState<'win' | 'lose' | 'draw' | null>(null);
   const [score, setScore] = useState({ me: 0, opponent: 0 });
+  const [draws, setDraws] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [nextRoundTimer, setNextRoundTimer] = useState<number | null>(null);
+  const [roundTimer, setRoundTimer] = useState<number | null>(null);
+
+  const matchStatusRef = React.useRef(matchStatus);
+  useEffect(() => {
+    matchStatusRef.current = matchStatus;
+  }, [matchStatus]);
+
+  useEffect(() => {
+    let timerInterval: NodeJS.Timeout;
+    if (nextRoundTimer !== null && nextRoundTimer > 0) {
+      timerInterval = setInterval(() => {
+        setNextRoundTimer(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(timerInterval);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timerInterval) clearInterval(timerInterval);
+    };
+  }, [nextRoundTimer]);
+
+  useEffect(() => {
+    let timerInterval: NodeJS.Timeout;
+    if (roundTimer !== null && roundTimer > 0 && matchStatus === 'playing') {
+      timerInterval = setInterval(() => {
+        setRoundTimer(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            clearInterval(timerInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else if (roundTimer === 0) {
+       console.log('DEBUG: Timer reached 0. Online . STATUS: ' + matchStatus);
+       if (socket) {
+         console.log('DEBUG: Emitting timeout_from_client to server.');
+         socket.emit('timeout_from_client');
+       }
+    }
+    return () => {
+      if (timerInterval) clearInterval(timerInterval);
+    };
+  }, [roundTimer, matchStatus, socket]);
 
   useEffect(() => {
     // Connect to Websocket
@@ -47,12 +100,15 @@ const OnlineMultiplayerGame: React.FC = () => {
       setRoomId(data.roomId);
     });
 
-    newSocket.on('match_found', (data: { roomId: string, players: any[] }) => {
+    newSocket.on('match_found', (data: { roomId: string, players: any[], round: number, draws: number }) => {
       setMatchStatus('playing');
       const opponent = data.players.find(p => p.id !== newSocket.id);
       if (opponent) {
         setOpponentName(opponent.name);
       }
+      setCurrentRound(data.round);
+      setDraws(data.draws);
+      setRoundTimer(10);
       playSound('click');
       vibrate('normal');
     });
@@ -65,7 +121,15 @@ const OnlineMultiplayerGame: React.FC = () => {
       setResult(data.result);
       setOpponentMove(data.opponentMove as Move);
       setScore({ me: data.score, opponent: data.opponentScore });
+      setDraws(data.draws);
+      setCurrentRound(data.round);
       setMatchStatus('result');
+      setRoundTimer(null);
+
+      // Start 3 second countdown for next round if not game over yet
+      if (data.round < 10) {
+        setNextRoundTimer(3);
+      }
 
       if (data.result === 'win') {
         playSound('win');
@@ -77,23 +141,100 @@ const OnlineMultiplayerGame: React.FC = () => {
       vibrate('normal');
     });
 
-    newSocket.on('next_round', () => {
+    newSocket.on('next_round', (data: { round: number }) => {
       setMatchStatus('playing');
       setMyMove(null);
       setOpponentMove(null);
       setResult(null);
+      setNextRoundTimer(null);
+      setCurrentRound(data.round);
+      setRoundTimer(10);
     });
 
     newSocket.on('game_over', (data) => {
       setMatchStatus('game_over');
       setFinalResult(data.result);
+      setRoundTimer(null);
+      
+      // Update local storage stats
+      if (data.result === 'win') {
+        const totalWins = Number(localStorage.getItem('sps_stats_online_wins') || 0) + 1;
+        localStorage.setItem('sps_stats_online_wins', String(totalWins));
+      } else if (data.result === 'lose') {
+        const totalLosses = Number(localStorage.getItem('sps_stats_online_losses') || 0) + 1;
+        localStorage.setItem('sps_stats_online_losses', String(totalLosses));
+      } else if (data.result === 'draw') {
+        const totalDraws = Number(localStorage.getItem('sps_stats_online_draws') || 0) + 1;
+        localStorage.setItem('sps_stats_online_draws', String(totalDraws));
+      }
+      
+      // Update last 5 matches history
+      try {
+        const historyJson = localStorage.getItem('sps_stats_online_history');
+        let history: string[] = historyJson ? JSON.parse(historyJson) : [];
+        history.unshift(data.result);
+        if (history.length > 5) {
+          history = history.slice(0, 5);
+        }
+        localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+      } catch (e) {
+        console.error('Failed to parse history', e);
+      }
     });
 
-    newSocket.on('opponent_disconnected', () => {
+    newSocket.on('opponent_disconnected', (data?: { wasPlaying?: boolean }) => {
       setMatchStatus('opponent_disconnected');
+      
+      // If we were playing, we get a win
+      if (data?.wasPlaying) {
+        setFinalResult('win'); // explicit win to show
+        const totalWins = Number(localStorage.getItem('sps_stats_online_wins') || 0) + 1;
+        localStorage.setItem('sps_stats_online_wins', String(totalWins));
+        
+        try {
+          const historyJson = localStorage.getItem('sps_stats_online_history');
+          let history: string[] = historyJson ? JSON.parse(historyJson) : [];
+          history.unshift('win');
+          if (history.length > 5) history = history.slice(0, 5);
+          localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+        } catch (e) {
+          console.error('Failed to parse history', e);
+        }
+      }
     });
+
+    const handleBeforeUnload = () => {
+      const currentStatus = matchStatusRef.current;
+      if (currentStatus === 'playing' || currentStatus === 'result') {
+         const totalLosses = Number(localStorage.getItem('sps_stats_online_losses') || 0) + 1;
+         localStorage.setItem('sps_stats_online_losses', String(totalLosses));
+         try {
+           const historyJson = localStorage.getItem('sps_stats_online_history');
+           let history: string[] = historyJson ? JSON.parse(historyJson) : [];
+           history.unshift('lose');
+           if (history.length > 5) history = history.slice(0, 5);
+           localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+         } catch (e) {}
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Record a loss if the user exits mid-game gracefully.
+      const currentStatus = matchStatusRef.current;
+      if (currentStatus === 'playing' || currentStatus === 'result') {
+         const totalLosses = Number(localStorage.getItem('sps_stats_online_losses') || 0) + 1;
+         localStorage.setItem('sps_stats_online_losses', String(totalLosses));
+         try {
+           const historyJson = localStorage.getItem('sps_stats_online_history');
+           let history: string[] = historyJson ? JSON.parse(historyJson) : [];
+           history.unshift('lose');
+           if (history.length > 5) history = history.slice(0, 5);
+           localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+         } catch (e) {}
+      }
+      
       newSocket.disconnect();
     };
   }, [rematchKey, userName, playSound, vibrate, t]);
@@ -145,14 +286,22 @@ const OnlineMultiplayerGame: React.FC = () => {
         </button>
         
         {matchStatus === 'playing' || matchStatus === 'result' ? (
-          <div className="flex items-center space-x-6 font-black text-white">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center space-x-4 sm:space-x-6 font-black text-white">
+            <div className="flex items-center gap-2 min-w-[20px] justify-end">
                <span className="rotate-180 text-white/80 text-2xl">{score.opponent}</span>
             </div>
-            <div className="flex flex-col items-center justify-center text-white/50 h-16 w-20 relative px-2">
-               <span className="text-[10px] uppercase tracking-widest leading-none text-center text-blue-400 font-bold border border-blue-500/30 bg-blue-500/10 px-2 py-1 rounded-full">VS</span>
+            <div className="flex flex-col items-center justify-center text-white/50 h-16 w-38 relative">
+               <span className="text-[10px] sm:text-xs uppercase tracking-widest leading-none text-center text-blue-400 font-bold border border-blue-500/30 bg-blue-500/10 px-2 sm:px-3 py-1 rounded-full mb-1">
+                 Round {currentRound}/10
+               </span>
+               <div className="flex items-center gap-2">
+                 <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/30 whitespace-nowrap">{t('game_draws')} {draws}</span>
+                 {roundTimer !== null && matchStatus === 'playing' && (
+                   <span className="text-[10px] sm:text-[11px] font-bold text-red-400 tracking-widest">⏳ {roundTimer}s</span>
+                 )}
+               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-[20px] justify-start">
                <span className="text-white text-2xl">{score.me}</span>
             </div>
           </div>
@@ -168,10 +317,10 @@ const OnlineMultiplayerGame: React.FC = () => {
       {/* TOP HALF - OPPONENT (Rotated 180) */}
       <div className="flex-1 bg-transparent relative rotate-180 flex flex-col p-6 pt-12 pb-6">
         <div className="flex-1 w-full flex items-center justify-center min-h-[120px]">
-           {(matchStatus === 'result' && opponentMove) && (
+           {(matchStatus === 'result') && (
              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white/5 rounded-full shadow-[0_0_40px_rgba(255,255,255,0.05)] flex items-center justify-center p-4 sm:p-6 text-white/80 border-4 border-white/10">
-                  <MoveIcon move={opponentMove} className="w-full h-full" />
+                  {opponentMove ? <MoveIcon move={opponentMove} className="w-full h-full text-white/80" /> : <div className="text-white/30 text-4xl font-black">?</div>}
                 </div>
              </motion.div>
            )}
@@ -184,7 +333,7 @@ const OnlineMultiplayerGame: React.FC = () => {
         </div>
 
         <div className="mt-auto relative z-10 w-full flex flex-col items-center">
-          <p className="text-center font-bold text-white/40 mb-4 uppercase tracking-widest text-xs relative max-w-[200px] truncate">{matchStatus === 'connecting' || matchStatus === 'waiting' ? '...' : opponentName}</p>
+          <p className="rotate-180 text-center font-bold text-white/40 mb-4 uppercase tracking-widest text-xs relative max-w-[200px] truncate">{matchStatus === 'connecting' || matchStatus === 'waiting' ? '...' : opponentName}</p>
           <div className="flex justify-between max-w-sm mx-auto w-full gap-4 relative">
              {/* Opponent moves are not interactive */}
              <div className="flex-1 aspect-square rounded-2xl bg-white/5 border border-white/5"></div>
@@ -197,10 +346,10 @@ const OnlineMultiplayerGame: React.FC = () => {
       {/* BOTTOM HALF - PLAYER 1 */}
       <div className="flex-1 bg-transparent relative flex flex-col p-6 pt-12 pb-6">
         <div className="flex-1 w-full flex items-center justify-center min-h-[120px]">
-           {(myMove) && (
+           {(myMove || matchStatus === 'result') && (
              <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center">
                 <div className="w-24 h-24 sm:w-32 sm:h-32 bg-blue-500/10 rounded-full shadow-[0_0_40px_rgba(59,130,246,0.15)] flex items-center justify-center p-4 sm:p-6 border-4 border-blue-500/20 text-white">
-                  <MoveIcon move={myMove} className="w-full h-full" />
+                  {myMove ? <MoveIcon move={myMove} className="w-full h-full" /> : <div className="text-blue-500/50 text-4xl font-black">?</div>}
                 </div>
              </motion.div>
            )}
@@ -295,10 +444,13 @@ const OnlineMultiplayerGame: React.FC = () => {
             exit={{ scale: 0, opacity: 0 }}
             className="absolute top-1/2 left-0 right-0 -translate-y-1/2 z-30"
           >
-             <div className="bg-black/90 backdrop-blur-xl border-y border-white/10 text-white w-full py-6 font-display font-black text-2xl uppercase tracking-widest shadow-2xl flex flex-col items-center justify-center gap-6">
-               <span className="rotate-180 text-white/80">{result === 'draw' ? t('game_draw') : (result === 'lose' ? t('game_play_win_remote') || 'KAZANDI' : t('game_play_lose_remote') || 'KAYBETTİ')}</span>
-               <div className="w-full h-px bg-white/10" />
-               <span className="text-white">{result === 'draw' ? t('game_draw') : (result === 'win' ? t('game_win') : t('game_lose'))}</span>
+             <div className="bg-black/90 backdrop-blur-xl border-y border-white/10 text-white w-full py-6 font-display font-black text-3xl uppercase tracking-widest shadow-2xl flex flex-col items-center justify-center gap-4">
+               <span className="text-white drop-shadow-lg">{result === 'draw' ? t('game_draw') : (result === 'win' ? t('game_win') : t('game_lose'))}</span>
+               {nextRoundTimer !== null && (
+                 <span className="text-xs font-bold text-white/50 tracking-widest uppercase flex items-center gap-2">
+                   {nextRoundTimer}
+                 </span>
+               )}
              </div>
           </motion.div>
         )}
@@ -317,7 +469,12 @@ const OnlineMultiplayerGame: React.FC = () => {
               {matchStatus === 'opponent_disconnected' ? (
                 <>
                   <Wifi className="w-20 h-20 mx-auto text-red-500 mb-2 opacity-80" />
-                  <h2 className="text-3xl font-black text-white uppercase tracking-widest leading-tight">{t('online_opponent_disconnect') || 'Oyuncu Ayrıldı'}</h2>
+                  <h2 className="text-3xl font-black text-white uppercase tracking-widest leading-tight mb-4">{t('online_opponent_disconnect') || 'Oyuncu Ayrıldı'}</h2>
+                  {finalResult === 'win' && (
+                    <div className="text-green-400 font-bold tracking-widest uppercase mb-4 px-4 py-2 border border-green-500/30 bg-green-500/10 rounded-full inline-block mx-auto">
+                      {t('game_win')} (+1 Win)
+                    </div>
+                  )}
                 </>
               ) : (
                 <>

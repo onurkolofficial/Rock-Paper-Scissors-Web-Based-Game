@@ -86,16 +86,16 @@ const MainMenu: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full text-slate-100 p-6 relative overflow-hidden font-sans bg-transparent">
+    <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full text-slate-100 p-6 pt-10 sm:pt-6 relative overflow-hidden font-sans bg-transparent">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md flex flex-col items-center text-center mb-10 z-10"
+        className="w-full max-w-md flex flex-col items-center text-center mt-6 mb-10 z-10"
       >
-        <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-2">
+        <h1 className="text-[42px] font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-2 leading-none">
           {toUpper(t('app_name'))}
         </h1>
-        <p className="text-slate-400 font-mono text-sm tracking-widest uppercase mt-4">
+        <p className="text-slate-400 font-black text-sm tracking-widest uppercase mt-2">
           {userName ? userName : t('guest')}
         </p>
       </motion.div>
@@ -104,11 +104,11 @@ const MainMenu: React.FC = () => {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 gap-4 w-full max-w-md z-10"
+        className="grid grid-cols-1 gap-4 w-full max-w-md z-10 -mt-[20px]"
       >
         <button
           onClick={() => navigateWithSound('single')}
-          className="group relative w-full text-left overflow-hidden bg-white/10 hover:bg-white/15 p-4 rounded-2xl flex items-center justify-between border border-white/10 shadow-xl active:scale-95 transition-all backdrop-blur-sm"
+          className="group relative w-full text-left overflow-hidden bg-white/10 hover:bg-white/15 p-4 rounded-2xl flex items-center justify-between border border-white/10 shadow-xl active:scale-95 transition-all backdrop-blur-sm mt-[2px]"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -121,7 +121,7 @@ const MainMenu: React.FC = () => {
 
         <button
           onClick={() => navigateWithSound('multi')}
-          className="group relative w-full text-left overflow-hidden bg-black/40 hover:bg-black/50 p-4 rounded-2xl flex items-center justify-between border border-white/5 shadow-xl active:scale-95 transition-all backdrop-blur-sm"
+          className="group relative w-full text-left overflow-hidden bg-black/40 hover:bg-black/50 p-4 pt-4 rounded-2xl flex items-center justify-between border border-white/5 shadow-xl active:scale-95 transition-all backdrop-blur-sm -mt-1 -mb-1"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
@@ -129,12 +129,12 @@ const MainMenu: React.FC = () => {
             </div>
             <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_two_player'))}</span>
           </div>
-          <span className="text-white/30 text-[10px] font-mono hidden sm:block">BÖLÜNMÜŞ EKRAN</span>
+          <span className="text-white/30 text-[10px] font-mono hidden sm:block">TWO SCREEN</span>
         </button>
 
         <button
           onClick={() => navigateWithSound('online')}
-          className="group relative w-full text-left overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl flex items-center justify-between border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm"
+          className="group relative w-full text-left overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl flex items-center justify-between border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm -mt-1 -mb-1"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
@@ -146,7 +146,7 @@ const MainMenu: React.FC = () => {
         </button>
 
         {userName ? (
-          <div className="flex flex-col bg-black/40 border border-white/5 p-4 rounded-2xl shadow-xl mt-1 backdrop-blur-sm">
+          <div className="flex flex-col bg-black/40 border border-white/5 p-4 rounded-2xl shadow-xl mt-[0px] backdrop-blur-sm">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-3">
                 {userImageUrl ? (
@@ -179,14 +179,14 @@ const MainMenu: React.FC = () => {
                 onClick={handleShowLeaderboard}
                 className="w-full bg-white/5 border border-white/10 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-green-400 active:scale-95 transition-all"
               >
-                <div className="w-5 h-5 flex items-center justify-center">🏆</div>
+                <div className="w-5 h-3 flex items-center justify-center">🏆</div>
                 <span className="tracking-widest">{t('leaderboard') || 'SIRALAMA'}</span>
               </button>
               <button
                 onClick={handleShowAchievements}
                 className="w-full bg-white/5 border border-white/10 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-yellow-400 active:scale-95 transition-all"
               >
-                <div className="w-5 h-5 flex items-center justify-center">🎯</div>
+                <div className="w-5 h-3 flex items-center justify-center">🎯</div>
                  <span className="tracking-widest">{t('achievements') || 'HEDEFLER'}</span>
               </button>
             </div>
@@ -201,7 +201,7 @@ const MainMenu: React.FC = () => {
           </button>
         )}
 
-        <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="grid grid-cols-3 gap-2 mt-1">
           <button
             onClick={() => navigateWithSound('stats')}
             className="w-full bg-black/40 border border-white/5 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-white/80 active:scale-95 transition-all backdrop-blur-sm"

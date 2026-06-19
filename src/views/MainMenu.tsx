@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useAppNavigation } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion } from 'motion/react';
-import { Play, Users, Settings as SettingsIcon, LogOut, LogIn, BarChart2, Gamepad2 } from 'lucide-react';
+import { Play, Users, Settings as SettingsIcon, LogOut, LogIn, BarChart2, Gamepad2, Globe } from 'lucide-react';
 import { App as CapacitorApp } from '@capacitor/app';
 import AlertModal from '../components/AlertModal';
 import { showBanner, hideBanner } from '../utils/ads';
+import { Capacitor } from '@capacitor/core';
+import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
 
 const MainMenu: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -56,7 +58,6 @@ const MainMenu: React.FC = () => {
     playSound('click');
     if (Capacitor.isNativePlatform()) {
       try {
-        const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
         // Check if we can sign in first, natively. If this throws, we fallback to custom UI.
         await CapacitorGameConnect.signIn();
         await CapacitorGameConnect.showLeaderboard({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
@@ -73,7 +74,6 @@ const MainMenu: React.FC = () => {
     playSound('click');
     if (Capacitor.isNativePlatform()) {
       try {
-        const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
         await CapacitorGameConnect.signIn();
         await CapacitorGameConnect.showAchievements();
       } catch (e) {
@@ -130,6 +130,19 @@ const MainMenu: React.FC = () => {
             <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_two_player'))}</span>
           </div>
           <span className="text-white/30 text-[10px] font-mono hidden sm:block">BÖLÜNMÜŞ EKRAN</span>
+        </button>
+
+        <button
+          onClick={() => navigateWithSound('online')}
+          className="group relative w-full text-left overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl flex items-center justify-between border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <Globe className="w-6 h-6 text-blue-400" />
+            </div>
+            <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_online_multiplayer'))}</span>
+          </div>
+          <span className="text-blue-400/50 text-[10px] font-mono hidden sm:block">SERVER</span>
         </button>
 
         {userName ? (

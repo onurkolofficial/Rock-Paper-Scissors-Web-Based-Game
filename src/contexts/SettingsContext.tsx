@@ -7,8 +7,10 @@ interface SettingsContextType {
   volume: number;
   vibrationEnabled: boolean;
   language: string;
+  interstitialAdsEnabled: boolean;
   toggleSound: () => void;
   toggleVibration: () => void;
+  toggleInterstitialAds: () => void;
   changeLanguage: (lang: string) => void;
   setVolume: (val: number) => void;
   vibrate: (type?: 'short' | 'normal' | 'long') => void;
@@ -26,6 +28,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
   const [vibrationEnabled, setVibrationEnabled] = useState(() => {
     return localStorage.getItem('sps_vibration') !== 'false';
+  });
+  const [interstitialAdsEnabled, setInterstitialAdsEnabled] = useState(() => {
+    return localStorage.getItem('sps_ads_interstitial') !== 'false';
   });
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('sps_lang') || 'tr';
@@ -78,6 +83,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newVal = !vibrationEnabled;
     setVibrationEnabled(newVal);
     localStorage.setItem('sps_vibration', String(newVal));
+  };
+
+  const toggleInterstitialAds = () => {
+    const newVal = !interstitialAdsEnabled;
+    setInterstitialAdsEnabled(newVal);
+    localStorage.setItem('sps_ads_interstitial', String(newVal));
   };
 
   useEffect(() => {
@@ -137,8 +148,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       volume,
       vibrationEnabled,
       language,
+      interstitialAdsEnabled,
       toggleSound,
       toggleVibration,
+      toggleInterstitialAds,
       changeLanguage,
       setVolume,
       vibrate,

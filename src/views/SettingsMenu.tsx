@@ -9,7 +9,7 @@ import { GAME_VERSION } from '../version';
 const SettingsMenu: React.FC = () => {
   const { t } = useTranslation();
   const { navigate } = useAppNavigation();
-  const { soundEnabled, toggleSound, volume, setVolume, vibrationEnabled, toggleVibration, language, changeLanguage, vibrate, playSound } = useSettings();
+  const { soundEnabled, toggleSound, volume, setVolume, vibrationEnabled, toggleVibration, interstitialAdsEnabled, toggleInterstitialAds, language, changeLanguage, vibrate, playSound } = useSettings();
 
   const handleToggleVibration = () => {
     playSound('click');
@@ -101,6 +101,19 @@ const SettingsMenu: React.FC = () => {
             </div>
             <div className={`w-12 h-6 rounded-full p-1 flex items-center transition-colors duration-300 ${vibrationEnabled ? 'bg-white justify-end' : 'bg-white/10 justify-start'}`}>
               <motion.div layout className={`w-4 h-4 rounded-full shadow-sm ${vibrationEnabled ? 'bg-black' : 'bg-white/50'}`} />
+            </div>
+          </button>
+
+          <button 
+            onClick={() => { playSound('click'); toggleInterstitialAds(); }}
+            className="w-full flex justify-between items-center py-3 px-2 border-b border-white/10 active:opacity-70 transition text-left"
+          >
+            <div className="flex flex-col items-start text-slate-200 pr-4">
+              <span className="font-bold uppercase tracking-wide leading-tight">{t('settings_ads_interstitial')}</span>
+              <span className="text-[10px] text-white/40 tracking-wider mt-1">Start.io</span>
+            </div>
+            <div className={`w-12 h-6 rounded-full p-1 flex items-center transition-colors duration-300 shrink-0 ${interstitialAdsEnabled ? 'bg-white justify-end' : 'bg-white/10 justify-start'}`}>
+              <motion.div layout className={`w-4 h-4 rounded-full shadow-sm ${interstitialAdsEnabled ? 'bg-black' : 'bg-white/50'}`} />
             </div>
           </button>
 

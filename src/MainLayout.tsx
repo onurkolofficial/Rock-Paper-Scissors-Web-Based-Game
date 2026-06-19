@@ -13,6 +13,7 @@ import SinglePlayerGame from './views/SinglePlayerGame';
 import TwoPlayerGame from './views/TwoPlayerGame';
 import LeaderboardMenu from './views/LeaderboardMenu';
 import AchievementsMenu from './views/AchievementsMenu';
+import OnlineMultiplayerGame from './views/OnlineMultiplayerGame';
 import ConfirmModal from './components/ConfirmModal';
 
 const MainLayout: React.FC = () => {
@@ -53,6 +54,7 @@ const MainLayout: React.FC = () => {
       case 'menu': return <MainMenu />;
       case 'single': return <SinglePlayerGame />;
       case 'multi': return <TwoPlayerGame />;
+      case 'online': return <OnlineMultiplayerGame />;
       case 'settings': return <SettingsMenu />;
       case 'stats': return <StatsMenu />;
       case 'leaderboard': return <LeaderboardMenu />;

@@ -39,6 +39,11 @@ export const hideBanner = async () => {
 
 export const showInterstitialAd = async () => {
   if (Capacitor.getPlatform() !== 'android') return;
+  
+  if (localStorage.getItem('sps_ads_interstitial') === 'false') {
+    return;
+  }
+
   await initAds();
   try {
     await StartioAds.loadInterstitialAd();

@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
+import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
 import { showInterstitialAd } from '../utils/ads';
 import { Achievement } from '../utils/achievements';
 
-export type Screen = 'menu' | 'single' | 'multi' | 'settings' | 'stats' | 'leaderboard' | 'achievements';
+export type Screen = 'menu' | 'single' | 'multi' | 'online' | 'settings' | 'stats' | 'leaderboard' | 'achievements';
 
 interface AppContextType {
   currentScreen: Screen;
@@ -45,7 +47,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const initPlayGamesSilent = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
-          const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
           const result = await CapacitorGameConnect.signIn();
           
           if (result && result.player_name) {
@@ -88,7 +89,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loginWithGoogle = async () => {
     try {
       if (Capacitor.isNativePlatform()) {
-        const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
         const result = await CapacitorGameConnect.signIn();
         
         const displayName = result.player_name || 'Oyuncu';
@@ -178,7 +178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (handled) return;
         }
 
-        if (currentScreen === 'single' || currentScreen === 'multi') {
+        if (currentScreen === 'single' || currentScreen === 'multi' || currentScreen === 'online') {
           // If in game show confirm to go to main menu
           setConfirmExit(true);
         } else if (currentScreen !== 'menu') {
@@ -199,7 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const navigateWithAds = async (screen: Screen) => {
     // Show interstitial ad when exiting a game mode
-    if (screen === 'menu' && (currentScreen === 'single' || currentScreen === 'multi')) {
+    if (screen === 'menu' && (currentScreen === 'single' || currentScreen === 'multi' || currentScreen === 'online')) {
       await showInterstitialAd();
     }
     setCurrentScreen(screen);

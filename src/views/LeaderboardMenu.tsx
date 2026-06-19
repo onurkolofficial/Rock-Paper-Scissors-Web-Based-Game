@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Trophy, ExternalLink } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { submitScoreToPlayGames } from '../utils/achievements';
+import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
 
 const defaultLeaderboardData: Array<{ rank: number; name: string; score: number; isCurrentPlayer: boolean }> = [];
 
@@ -28,8 +29,6 @@ const LeaderboardMenu: React.FC = () => {
           // Attempt to submit local fresh score before view
           await submitScoreToPlayGames(localScore);
 
-          const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
-          
           const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
           if (remoteScore && remoteScore.player_score > localScore) {
             localScore = remoteScore.player_score;

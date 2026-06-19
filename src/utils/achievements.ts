@@ -1,12 +1,12 @@
 import { Capacitor } from '@capacitor/core';
-import { GameServices } from '@openforge/capacitor-game-services';
+import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
 
 export const submitScoreToPlayGames = async (score: number) => {
   if (Capacitor.isNativePlatform()) {
     try {
-      await GameServices.submitScore({
-        leaderboardId: 'CgkIua-BqqENEAIQAQ', // REPLACE WITH REAL LEADERBOARD ID
-        score: score
+      await CapacitorGameConnect.submitScore({
+        leaderboardID: 'CgkIua-BqqENEAIQCw', // REPLACE WITH REAL LEADERBOARD ID
+        totalScoreAmount: score
       });
       console.log('Score submitted successfully to Play Games:', score);
     } catch (e) {
@@ -60,15 +60,16 @@ export const unlockAchievement = async (
   const ach = ACHIEVEMENTS_LIST.find((a) => a.id === id);
   if (!ach) return false;
 
-  // Trigger local notification callback
-  if (onUnlock) {
+  // Trigger local notification callback only on non-native environments 
+  // to prevent overlapping with Play Games native toasts/sounds
+  if (!Capacitor.isNativePlatform() && onUnlock) {
     onUnlock({ ...ach, isUnlocked: true });
   }
 
   // Persist to Google Play Console natively if native
   if (Capacitor.isNativePlatform()) {
     try {
-      await GameServices.unlockAchievement({
+      await CapacitorGameConnect.unlockAchievement({
         achievementID: ach.playGamesId
       });
       console.log('Successfully completed and reported to Play Games:', ach.id);

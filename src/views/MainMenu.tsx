@@ -10,7 +10,7 @@ import { showBanner, hideBanner } from '../utils/ads';
 
 const MainMenu: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { navigate, userName, setUserName, userImageUrl, setUserImageUrl, loginWithGoogle } = useAppNavigation();
+  const { navigate, userName, setUserName, userImageUrl, setUserImageUrl, loginWithGoogle, logout } = useAppNavigation();
 
   const { toggleSound, playSound } = useSettings();
 
@@ -42,15 +42,47 @@ const MainMenu: React.FC = () => {
     }
   };
 
-  const handleGoogleLogoutMock = () => {
+  const handleGoogleLogoutMock = async () => {
     playSound('click');
-    setUserName('');
-    setUserImageUrl('');
+    await logout();
   };
 
   const navigateWithSound = (view: any) => {
     playSound('click');
     navigate(view);
+  };
+
+  const handleShowLeaderboard = async () => {
+    playSound('click');
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
+        // Check if we can sign in first, natively. If this throws, we fallback to custom UI.
+        await CapacitorGameConnect.signIn();
+        await CapacitorGameConnect.showLeaderboard({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+      } catch (e) {
+        console.warn('Native leaderboard not supported or not signed in:', e);
+        navigate('leaderboard');
+      }
+    } else {
+      navigate('leaderboard');
+    }
+  };
+
+  const handleShowAchievements = async () => {
+    playSound('click');
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
+        await CapacitorGameConnect.signIn();
+        await CapacitorGameConnect.showAchievements();
+      } catch (e) {
+        console.warn('Native achievements not supported or not signed in:', e);
+        navigate('achievements');
+      }
+    } else {
+      navigate('achievements');
+    }
   };
 
   return (
@@ -60,21 +92,6 @@ const MainMenu: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md flex flex-col items-center text-center mb-10 z-10"
       >
-        {userName && userImageUrl && (
-          <motion.div 
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="mb-4 relative group"
-          >
-            <div className="absolute inset-0 bg-yellow-400/25 rounded-full blur-md group-hover:blur-lg transition-all duration-300" />
-            <img 
-              src={userImageUrl} 
-              alt={userName}
-              referrerPolicy="no-referrer"
-              className="w-16 h-16 rounded-full border-2 border-yellow-400/60 shadow-xl object-cover relative z-10"
-            />
-          </motion.div>
-        )}
         <h1 className="text-5xl md:text-6xl font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-2">
           {toUpper(t('app_name'))}
         </h1>
@@ -138,7 +155,7 @@ const MainMenu: React.FC = () => {
               </div>
               <button 
                 onClick={handleGoogleLogoutMock}
-                className="bg-red-500/10 text-red-400 border border-red-900/50 px-3 py-2 rounded-lg text-xs font-bold tracking-widest hover:bg-red-500/20 active:scale-95 transition-all"
+                className={`bg-red-500/10 text-red-400 border border-red-900/50 px-3 py-2 rounded-lg text-xs font-bold tracking-widest hover:bg-red-500/20 active:scale-95 transition-all ${Capacitor.isNativePlatform() ? 'hidden' : ''}`}
               >
                 {toUpper(t('menu_logout') || 'Çıkış Yap')}
               </button>
@@ -146,14 +163,14 @@ const MainMenu: React.FC = () => {
             {/* Play Games Buttons */}
             <div className="grid grid-cols-2 gap-2 mt-2">
               <button
-                onClick={() => navigateWithSound('leaderboard')}
+                onClick={handleShowLeaderboard}
                 className="w-full bg-white/5 border border-white/10 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-green-400 active:scale-95 transition-all"
               >
                 <div className="w-5 h-5 flex items-center justify-center">🏆</div>
                 <span className="tracking-widest">{t('leaderboard') || 'SIRALAMA'}</span>
               </button>
               <button
-                onClick={() => navigateWithSound('achievements')}
+                onClick={handleShowAchievements}
                 className="w-full bg-white/5 border border-white/10 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-yellow-400 active:scale-95 transition-all"
               >
                 <div className="w-5 h-5 flex items-center justify-center">🎯</div>

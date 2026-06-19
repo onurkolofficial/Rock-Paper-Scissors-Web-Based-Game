@@ -4,7 +4,6 @@ import { useAppNavigation } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion } from 'motion/react';
 import { ArrowLeft, Trophy, ExternalLink } from 'lucide-react';
-import { GameServices } from '@openforge/capacitor-game-services';
 import { Capacitor } from '@capacitor/core';
 import { submitScoreToPlayGames } from '../utils/achievements';
 
@@ -20,7 +19,7 @@ const LeaderboardMenu: React.FC = () => {
     // Current user's real wins and draws from localStorage
     const wins = Number(localStorage.getItem('sps_stats_wins') || 0);
     const draws = Number(localStorage.getItem('sps_stats_draws') || 0);
-    const localScore = (wins * 100) + (draws * 20);
+    let localScore = (wins * 100) + (draws * 20);
     
     // Check if we are on Android & attempt to sync or pull
     const syncLeaderboard = async () => {
@@ -29,38 +28,22 @@ const LeaderboardMenu: React.FC = () => {
           // Attempt to submit local fresh score before view
           await submitScoreToPlayGames(localScore);
 
-          // Attempt to fetch leaderboard data programmatically if supported
-          if (typeof (GameServices as any).getLeaderboardScores === 'function') {
-            const res = await (GameServices as any).getLeaderboardScores({
-              leaderboardId: 'CgkIua-BqqENEAIQAQ',
-              span: 'ALL_TIME',
-              collection: 'PUBLIC',
-              maxResults: 10
-            });
-            if (res && res.scores) {
-              const formatted = res.scores.map((s: any, idx: number) => ({
-                rank: idx + 1,
-                name: s.displayName,
-                score: s.rawScoreValue,
-                isCurrentPlayer: s.isCurrentPlayer
-              }));
-              setData(formatted);
-              return;
-            }
+          const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
+          
+          const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+          if (remoteScore && remoteScore.player_score > localScore) {
+            localScore = remoteScore.player_score;
           }
         } catch (err: any) {
-          // Quietly fallback for unimplemented methods on Android without throwing noisy console logs
           const errMsg = err?.message || String(err);
-          if (!errMsg.includes('not implemented')) {
-            console.warn("Could not load scores programmatically:", err);
-          }
+          console.warn("Could not load score programmatically:", errMsg);
         }
       }
 
-      // Default: Only display current player's actual score since user requested no mock demo players
+      // Default: Only display current player's actual score
       setData([{
         rank: 1,
-        name: userName || t('you_label'),
+        name: userName || t('you_label') || 'Sen',
         score: localScore,
         isCurrentPlayer: true
       }]);

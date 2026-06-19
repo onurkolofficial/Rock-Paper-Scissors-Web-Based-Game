@@ -31,33 +31,7 @@ const MainLayout: React.FC = () => {
     }
   }, [achievementToast, setAchievementToast, playSound]);
 
-  // Silent auto-login to Google Play Games on cold launch
-  useEffect(() => {
-    const initPlayGames = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const { GameServices } = await import('@openforge/capacitor-game-services');
-          // Perform silent sign in once on initial app load
-          await GameServices.signIn();
-          console.log('Google Play Games silent sign-in completed');
-          
-          // Auto-sync current leaderboard score from localStorage on load
-          const wins = Number(localStorage.getItem('sps_stats_wins') || 0);
-          const draws = Number(localStorage.getItem('sps_stats_draws') || 0);
-          const totalScore = (wins * 100) + (draws * 20);
-          if (totalScore > 0) {
-            await GameServices.submitScore({
-              leaderboardId: 'CgkIua-BqqENEAIQAQ',
-              score: totalScore
-            });
-          }
-        } catch (e) {
-          console.warn('Silent Google Play Games sign-in was skipped or requires manual authorization:', e);
-        }
-      }
-    };
-    initPlayGames();
-  }, []);
+
 
   const handleConfirmExit = () => {
     playSound('click');
@@ -99,55 +73,57 @@ const MainLayout: React.FC = () => {
       />
 
       {/* Swipe-to-dismiss Top Achievement Banner */}
-      <AnimatePresence>
-        {achievementToast && (
-          <motion.div
-            initial={{ opacity: 0, y: -100, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -100, scale: 0.9 }}
-            transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-            drag="y"
-            dragConstraints={{ top: -200, bottom: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(event, info) => {
-              if (info.offset.y < -35) {
-                setAchievementToast(null);
-              }
-            }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[340px] px-4 cursor-grab active:cursor-grabbing pointer-events-auto touch-none"
-          >
-            <div className="bg-slate-900/95 border-2 border-yellow-400/55 text-slate-100 p-4 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.65)] backdrop-blur-xl flex items-center gap-4 select-none relative overflow-hidden">
-              {/* Progress loader accent line */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-yellow-400/20 overflow-hidden rounded-t-full">
-                <motion.div 
-                  initial={{ width: '100%' }}
-                  animate={{ width: '0%' }}
-                  transition={{ duration: 4, ease: 'linear' }}
-                  className="h-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
-                />
-              </div>
+      {!Capacitor.isNativePlatform() && (
+        <AnimatePresence>
+          {achievementToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -100, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -100, scale: 0.9 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+              drag="y"
+              dragConstraints={{ top: -200, bottom: 0 }}
+              dragElastic={0.15}
+              onDragEnd={(event, info) => {
+                if (info.offset.y < -35) {
+                  setAchievementToast(null);
+                }
+              }}
+              className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[340px] px-4 cursor-grab active:cursor-grabbing pointer-events-auto touch-none"
+            >
+              <div className="bg-slate-900/95 border-2 border-yellow-400/55 text-slate-100 p-4 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.65)] backdrop-blur-xl flex items-center gap-4 select-none relative overflow-hidden">
+                {/* Progress loader accent line */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-yellow-400/20 overflow-hidden rounded-t-full">
+                  <motion.div 
+                    initial={{ width: '100%' }}
+                    animate={{ width: '0%' }}
+                    transition={{ duration: 4, ease: 'linear' }}
+                    className="h-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)]"
+                  />
+                </div>
 
-              {/* Icon Container */}
-              <div className="w-11 h-11 bg-yellow-400/15 border border-yellow-400/30 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-[0_0_15px_rgba(250,204,21,0.25)]">
-                {achievementToast.icon}
-              </div>
+                {/* Icon Container */}
+                <div className="w-11 h-11 bg-yellow-400/15 border border-yellow-400/30 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-[0_0_15px_rgba(250,204,21,0.25)]">
+                  {achievementToast.icon}
+                </div>
 
-              {/* Text metadata */}
-              <div className="flex-1 min-w-0 pr-2">
-                <p className="text-[10px] text-yellow-500 font-extrabold uppercase tracking-widest leading-none mb-1">
-                  {t('achievements') || 'BAŞARI KAZANILDI'}
-                </p>
-                <h4 className="text-xs font-bold text-white truncate">
-                  {t(achievementToast.titleKey)}
-                </h4>
-                <p className="text-[10px] text-white/50 leading-tight uppercase tracking-wide mt-1">
-                  {t(achievementToast.descKey)}
-                </p>
+                {/* Text metadata */}
+                <div className="flex-1 min-w-0 pr-2">
+                  <p className="text-[10px] text-yellow-500 font-extrabold uppercase tracking-widest leading-none mb-1">
+                    {t('achievements') || 'BAŞARI KAZANILDI'}
+                  </p>
+                  <h4 className="text-xs font-bold text-white truncate">
+                    {t(achievementToast.titleKey)}
+                  </h4>
+                  <p className="text-[10px] text-white/50 leading-tight uppercase tracking-wide mt-1">
+                    {t(achievementToast.descKey)}
+                  </p>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   );
 };

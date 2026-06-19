@@ -15,8 +15,10 @@ interface AppContextType {
   setUserName: (name: string) => void;
   userImageUrl: string;
   setUserImageUrl: (url: string) => void;
-  loginWithGoogle: () => void;
-  achievementToast: Achievement | null;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
+  isPlayGamesSignedIn: boolean;
+  achievementToast: Achievement | null;  
   setAchievementToast: (toast: Achievement | null) => void;
 }
 
@@ -26,6 +28,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [currentScreen, setCurrentScreen] = useState<Screen>('menu');
   const [confirmExit, setConfirmExit] = useState(false);
   const [achievementToast, setAchievementToast] = useState<Achievement | null>(null);
+  const [isPlayGamesSignedIn, setIsPlayGamesSignedIn] = useState(false);
 
   // Try to load user name
   const [userName, setUserName] = useState(() => {
@@ -38,33 +41,124 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   useEffect(() => {
-    try {
-      // Google Play Integration
-      // Initialize
-      GoogleSignIn.initialize({
-        clientId: '455623071673-11ftsbe7pgvao1etk07dnka66rvobj09.apps.googleusercontent.com',
-        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/games'],
-      });
-    } catch (e) {
-      console.error('Failed to initialize GoogleSignIn:', e);
-    }
+    // We only initialize Play Games logic
+    const initPlayGamesSilent = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
+          const result = await CapacitorGameConnect.signIn();
+          
+          if (result && result.player_name) {
+             setIsPlayGamesSignedIn(true);
+             setUserName(result.player_name);
+             localStorage.setItem('sps_user_name', result.player_name);
+          }
+          
+          let wins = Number(localStorage.getItem('sps_stats_wins') || 0);
+          let draws = Number(localStorage.getItem('sps_stats_draws') || 0);
+          let totalScoreAmount = (wins * 100) + (draws * 20);
+          
+          try {
+            if (totalScoreAmount > 0) {
+              await CapacitorGameConnect.submitScore({
+                leaderboardID: 'CgkIua-BqqENEAIQAQ',
+                totalScoreAmount: totalScoreAmount
+              });
+            }
+            
+            const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+            if (remoteScore && remoteScore.player_score > totalScoreAmount) {
+              const recoveredWins = Math.floor(remoteScore.player_score / 100);
+              const recoveredDraws = Math.floor((remoteScore.player_score % 100) / 20);
+              localStorage.setItem('sps_stats_wins', String(recoveredWins));
+              localStorage.setItem('sps_stats_draws', String(recoveredDraws));
+            }
+          } catch (scoreErr) {
+            console.warn('Silent Play Games score sync skipped:', scoreErr);
+          }
+        } catch (e) {
+          console.warn('Silent Play Games sign-in skipped:', e);
+        }
+      }
+    };
+    
+    initPlayGamesSilent();
   }, []);
 
   const loginWithGoogle = async () => {
     try {
-      const result = await GoogleSignIn.signIn();
-      const displayName = result.displayName || 'Oyuncu';
-      const imageUrl = result.imageUrl || '';
-      
-      // Now update userName and userImageUrl in AppContext.
-      localStorage.setItem('sps_user_name', displayName);
-      localStorage.setItem('sps_user_image_url', imageUrl);
-      setUserName(displayName);
-      setUserImageUrl(imageUrl);
+      if (Capacitor.isNativePlatform()) {
+        const { CapacitorGameConnect } = await import('@openforge/capacitor-game-connect');
+        const result = await CapacitorGameConnect.signIn();
+        
+        const displayName = result.player_name || 'Oyuncu';
+        setIsPlayGamesSignedIn(true);
+        
+        let wins = Number(localStorage.getItem('sps_stats_wins') || 0);
+        let draws = Number(localStorage.getItem('sps_stats_draws') || 0);
+        let totalScoreAmount = (wins * 100) + (draws * 20);
+        
+        try {
+          if (totalScoreAmount > 0) {
+            await CapacitorGameConnect.submitScore({
+              leaderboardID: 'CgkIua-BqqENEAIQAQ',
+              totalScoreAmount: totalScoreAmount
+            });
+          }
+          
+          const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+          if (remoteScore && remoteScore.player_score > totalScoreAmount) {
+            const recoveredWins = Math.floor(remoteScore.player_score / 100);
+            const recoveredDraws = Math.floor((remoteScore.player_score % 100) / 20);
+            localStorage.setItem('sps_stats_wins', String(recoveredWins));
+            localStorage.setItem('sps_stats_draws', String(recoveredDraws));
+          }
+        } catch (scoreError) {
+          console.warn('Score sync error:', scoreError);
+        }
+        
+        localStorage.setItem('sps_user_name', displayName);
+        setUserName(displayName);
+        setUserImageUrl(''); // Clear image as play games doesn't return one directly here
+      } else {
+        // Fallback for web if needed
+        const { GoogleSignIn } = await import('@capawesome/capacitor-google-sign-in');
+        await GoogleSignIn.initialize({
+          clientId: '455623071673-11ftsbe7pgvao1etk07dnka66rvobj09.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+        });
+        const result = await GoogleSignIn.signIn();
+        const displayName = result.displayName || 'Oyuncu';
+        const imageUrl = result.imageUrl || '';
+        
+        localStorage.setItem('sps_user_name', displayName);
+        localStorage.setItem('sps_user_image_url', imageUrl);
+        setUserName(displayName);
+        setUserImageUrl(imageUrl);
+      }
     } catch (error) {
       console.error("Login Error:", error);
-      throw error; // Rethrow to show the error modal in MainMenu
+      throw error;
     }
+  };
+
+  const logout = async () => {
+    try {
+      if (!Capacitor.isNativePlatform()) {
+        const { GoogleSignIn } = await import('@capawesome/capacitor-google-sign-in');
+        await GoogleSignIn.signOut();
+      }
+    } catch (e) {
+      console.warn('GoogleSignIn.signOut failed', e);
+    }
+    
+    // Note: Play Games v2 SDK doesn't have a direct sign-out method in this Capacitor plugin.
+    // Also clearing the state.
+    setIsPlayGamesSignedIn(false);
+    setUserName('');
+    setUserImageUrl('');
+    localStorage.removeItem('sps_user_name');
+    localStorage.removeItem('sps_user_image_url');
   };
 
   useEffect(() => {
@@ -122,6 +216,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userImageUrl,
       setUserImageUrl,
       loginWithGoogle,
+      logout,
+      isPlayGamesSignedIn,
       achievementToast,
       setAchievementToast
     }}>

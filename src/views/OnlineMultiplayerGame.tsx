@@ -16,11 +16,11 @@ const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
 
 const OnlineMultiplayerGame: React.FC = () => {
   const { t } = useTranslation();
-  const { setConfirmExit, userName, navigate } = useAppNavigation();
+  const { setConfirmExit, confirmExit, userName, navigate } = useAppNavigation();
   const { playSound, vibrate } = useSettings();
 
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [gameMode, setGameMode] = useState<'selection' | 'matchmaking' | 'create_room' | 'join_room' | 'in_game'>('selection');
+  const [gameMode, setGameMode] = useState<'selection' | 'matchmaking' | 'create_room' | 'join_room' | 'joining_room' | 'in_game'>('selection');
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [matchStatus, setMatchStatus] = useState<'connecting' | 'waiting' | 'starting' | 'playing' | 'result' | 'game_over' | 'opponent_disconnected'>('connecting');
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -37,6 +37,7 @@ const OnlineMultiplayerGame: React.FC = () => {
   const [nextRoundTimer, setNextRoundTimer] = useState<number | null>(null);
   const [roundTimer, setRoundTimer] = useState<number | null>(null);
   const [startingTimer, setStartingTimer] = useState<number | null>(null);
+  const [joinErrorMsg, setJoinErrorMsg] = useState<string | null>(null);
 
   const matchStatusRef = React.useRef(matchStatus);
   useEffect(() => {
@@ -114,7 +115,7 @@ const OnlineMultiplayerGame: React.FC = () => {
     });
 
     newSocket.on('join_error', (data: { message: string }) => {
-      alert(data.message);
+      setJoinErrorMsg(data.message);
       setGameMode('selection');
       setMatchStatus('connecting'); // Reset to an initial state logically
     });
@@ -319,6 +320,7 @@ const OnlineMultiplayerGame: React.FC = () => {
   const ALLOWED_MOVES: Move[] = ['rock', 'paper', 'scissors'];
 
   return (
+    <>
     <div className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden relative bg-transparent">
       {/* Central Divider / Controls */}
       <div className="absolute top-1/2 left-0 right-0 h-16 -mt-8 z-20 flex items-center justify-between px-4 bg-black/40 backdrop-blur-md border-y border-white/5 shadow-2xl">
@@ -458,38 +460,42 @@ const OnlineMultiplayerGame: React.FC = () => {
             
             {gameMode === 'selection' && (
               <div className="flex flex-col items-center gap-6 w-full max-w-sm">
-                 <h2 className="text-3xl font-bold text-white tracking-widest uppercase mb-8">ÇEVRİMİÇİ</h2>
-                 <button onClick={() => { playSound('click'); setGameMode('matchmaking'); socket?.emit('join_matchmaking', { name: userName || 'Misafir' }); }} className="group relative w-full text-center overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
-                   Eşleşmeli Oyun
+                 <h2 className="text-3xl font-bold text-white tracking-widest uppercase mb-8">{t('online_title')}</h2>
+                 <button onClick={() => { playSound('click'); setGameMode('matchmaking'); socket?.emit('join_matchmaking', { name: userName || t('guest') }); }} className="group relative w-full text-center overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
+                   {t('online_matchmaking')}
                  </button>
-                 <button onClick={() => { playSound('click'); setGameMode('create_room'); socket?.emit('create_private_room', { name: userName || 'Misafir' })}} className="group relative w-full text-center overflow-hidden bg-purple-600/20 hover:bg-purple-600/30 p-4 rounded-2xl border border-purple-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
-                   Oda Kur
+                 <button onClick={() => { playSound('click'); setGameMode('create_room'); socket?.emit('create_private_room', { name: userName || t('guest') })}} className="group relative w-full text-center overflow-hidden bg-purple-600/20 hover:bg-purple-600/30 p-4 rounded-2xl border border-purple-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
+                   {t('online_create_room')}
                  </button>
                  <button onClick={() => { playSound('click'); setGameMode('join_room'); }} className="group relative w-full text-center overflow-hidden bg-green-600/20 hover:bg-green-600/30 p-4 rounded-2xl border border-green-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
-                   Kod ile Katıl
+                   {t('online_join_room')}
                  </button>
               </div>
             )}
 
-            {gameMode === 'join_room' && (
+            {gameMode === 'join_room' && matchStatus !== 'starting' && matchStatus !== 'playing' && (
               <div className="flex flex-col items-center gap-6 w-full max-w-sm">
-                <h2 className="text-2xl font-bold text-white tracking-widest uppercase">Odaya Katıl</h2>
+                <h2 className="text-2xl font-bold text-white tracking-widest uppercase">{t('online_join_room_title')}</h2>
                 <input 
                   type="text" 
                   value={joinRoomCode} 
                   onChange={e => setJoinRoomCode(e.target.value.toUpperCase())}
-                  placeholder="ODA KODU"
+                  placeholder={t('online_room_code_placeholder')}
                   className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-4 text-center text-2xl text-white font-mono uppercase focus:outline-none focus:border-blue-500"
                   maxLength={6}
                 />
                 <button 
-                  onClick={() => { playSound('click'); socket?.emit('join_private_room', { name: userName || 'Misafir', roomId: joinRoomCode }); }}
+                  onClick={() => { 
+                    playSound('click'); 
+                    socket?.emit('join_private_room', { name: userName || t('guest'), roomId: joinRoomCode }); 
+                    setGameMode('joining_room'); // Hide inputs and show connecting
+                  }}
                   disabled={joinRoomCode.length < 3}
                   className="group relative w-full text-center overflow-hidden bg-green-600/20 hover:bg-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed p-4 rounded-2xl border border-green-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide"
                 >
-                  Katıl
+                  {t('online_join_button')}
                 </button>
-                <button onClick={() => { playSound('click'); setGameMode('selection'); }} className="text-white/50 underline mt-4">İptal</button>
+                <button onClick={() => { playSound('click'); setGameMode('selection'); }} className="text-white/50 underline mt-4">{t('online_cancel')}</button>
               </div>
             )}
 
@@ -499,16 +505,16 @@ const OnlineMultiplayerGame: React.FC = () => {
                   <Wifi className="w-16 h-16 text-yellow-400 animate-pulse" />
                 </motion.div>
                 <h2 className="text-2xl font-bold text-white text-center tracking-widest mb-2 uppercase">
-                   {gameMode === 'create_room' ? 'Oda Kuruldu' : t('online_waiting')}
+                   {gameMode === 'create_room' ? t('online_room_created') : t('online_waiting')}
                 </h2>
                 {gameMode === 'create_room' && (
                   <div className="bg-white/10 px-8 py-4 rounded-xl border border-white/20 text-center mb-4">
-                    <div className="text-xs text-white/50 uppercase tracking-widest mb-1">Oda Kodu</div>
+                    <div className="text-xs text-white/50 uppercase tracking-widest mb-1">{t('online_room_code_label')}</div>
                     <div className="text-4xl font-mono text-white font-bold tracking-widest">{roomId}</div>
                   </div>
                 )}
                 {gameMode === 'create_room' && (
-                  <p className="text-white/60 text-center mb-4">Meydan okumak için kodu arkadaşınla paylaş!</p>
+                  <p className="text-white/60 text-center mb-4">{t('online_room_share_msg')}</p>
                 )}
                 <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
                    <motion.div className="h-full bg-yellow-500" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 2, repeat: Infinity }} />
@@ -518,7 +524,7 @@ const OnlineMultiplayerGame: React.FC = () => {
             
             {matchStatus === 'starting' && (
               <div className="flex flex-col items-center gap-6 w-full max-w-sm">
-                <h2 className="text-3xl font-bold text-green-400 text-center tracking-widest mb-4 uppercase">Oyuncu Katıldı</h2>
+                <h2 className="text-3xl font-bold text-green-400 text-center tracking-widest mb-4 uppercase">{t('online_player_joined')}</h2>
                 <div className="text-white/80 text-xl font-bold mb-8">{opponentName}</div>
                 <motion.div animate={{ scale: [1, 1.5, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="text-6xl font-black text-white drop-shadow-xl">
                    {startingTimer}
@@ -526,10 +532,17 @@ const OnlineMultiplayerGame: React.FC = () => {
               </div>
             )}
 
-            {matchStatus === 'connecting' && gameMode === 'matchmaking' && (
+            {gameMode === 'joining_room' && (
                <div className="flex flex-col items-center gap-6 w-full max-w-sm">
                   <Wifi className="w-16 h-16 text-blue-400 animate-pulse" />
-                  <h2 className="text-2xl font-bold text-white text-center tracking-widest uppercase">Bağlanıyor...</h2>
+                  <h2 className="text-2xl font-bold text-white text-center tracking-widest uppercase">{t('online_connecting_msg')}</h2>
+               </div>
+            )}
+
+            {matchStatus === 'connecting' && gameMode === 'matchmaking' && (
+               <div className="flex flex-col items-center gap-6 mt-5 w-full max-w-sm">
+                  <Wifi className="w-12 h-12 text-blue-400 animate-pulse" />
+                  <h2 className="text-2xl font-bold text-white text-center tracking-widest uppercase">{t('online_connecting_msg')}</h2>
                </div>
             )}
 
@@ -614,6 +627,24 @@ const OnlineMultiplayerGame: React.FC = () => {
       </AnimatePresence>
 
     </div>
+
+      <AlertModal 
+        isOpen={!!joinErrorMsg} 
+        title={t('error') || 'HATA'} 
+        message={joinErrorMsg || ''} 
+        onClose={() => setJoinErrorMsg(null)} 
+      />
+      
+      <AlertModal 
+        isOpen={confirmExit}
+        title={t('exit_game') || 'OYUNDAN ÇIKIŞ'}
+        message={t('exit_confirm') || 'Oyundan çıkmak istediğinize emin misiniz? Devam eden maçınız kayıp olarak sayılacaktır.'}
+        onConfirm={handleDirectExit}
+        onClose={() => setConfirmExit(false)}
+        confirmText={t('yes') || 'EVET'}
+        cancelText={t('no') || 'HAYIR'}
+      />
+    </>
   );
 };
 

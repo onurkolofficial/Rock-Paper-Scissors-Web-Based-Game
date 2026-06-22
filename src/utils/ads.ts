@@ -8,7 +8,7 @@ export const initAds = async () => {
   if (!adsInitPromise) {
     adsInitPromise = StartioAds.initParams({
       appId: '209638589',
-      enableTest: true // Test mode enabled
+      enableTest: false // Test mode enabled
     }).catch(e => {
       console.error("Start.io Init error", e);
     });

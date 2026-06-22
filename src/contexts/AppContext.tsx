@@ -178,6 +178,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (handled) return;
         }
 
+        if (typeof (window as any).spsOnlineBackHandler === 'function') {
+          const handled = (window as any).spsOnlineBackHandler();
+          if (handled) return;
+        }
+
         if (currentScreen === 'single' || currentScreen === 'multi' || currentScreen === 'online') {
           // If in game show confirm to go to main menu
           setConfirmExit(true);

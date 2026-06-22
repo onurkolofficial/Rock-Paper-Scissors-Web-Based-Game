@@ -26,6 +26,7 @@ interface Room {
   round: number;
   draws: number;
   roundTimeoutId?: NodeJS.Timeout;
+  isPrivate?: boolean;
 }
 
 const rooms: Record<string, Room> = {};
@@ -166,7 +167,7 @@ io.on("connection", (socket: Socket) => {
     
     // Look for a waiting room with 1 player
     for (const roomId in rooms) {
-      if (rooms[roomId].status === 'waiting' && Object.keys(rooms[roomId].players).length === 1) {
+      if (rooms[roomId].status === 'waiting' && Object.keys(rooms[roomId].players).length === 1 && !rooms[roomId].isPrivate) {
         joinedRoom = roomId;
         rooms[roomId].players[socket.id] = { socketId: socket.id, name: data.name || 'Guest', move: null, score: 0 };
         rooms[roomId].status = 'playing';
@@ -184,9 +185,15 @@ io.on("connection", (socket: Socket) => {
           players: Object.values(rooms[roomId].players).map(p => ({ id: p.socketId, name: p.name, score: p.score }))
         });
 
-        rooms[roomId].roundTimeoutId = setTimeout(() => {
-          evaluateRound(roomId, true);
-        }, 10000);
+        // Delay 3 seconds before starting the first round timeout
+        setTimeout(() => {
+           if (rooms[roomId]) {
+             io.to(roomId).emit("game_starting");
+             rooms[roomId].roundTimeoutId = setTimeout(() => {
+               evaluateRound(roomId, true);
+             }, 10000);
+           }
+        }, 3000);
         
         break;
       }
@@ -202,11 +209,64 @@ io.on("connection", (socket: Socket) => {
         },
         status: 'waiting',
         round: 1,
-        draws: 0
+        draws: 0,
+        isPrivate: false
       };
       playerRoomMap.set(socket.id, newRoomId);
       socket.join(newRoomId);
       socket.emit("waiting_for_opponent", { roomId: newRoomId });
+    }
+  });
+
+  socket.on("create_private_room", (data: { name: string }) => {
+    const newRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    rooms[newRoomId] = {
+      id: newRoomId,
+      players: {
+        [socket.id]: { socketId: socket.id, name: data.name || 'Guest', move: null, score: 0 }
+      },
+      status: 'waiting',
+      round: 1,
+      draws: 0,
+      isPrivate: true
+    };
+    playerRoomMap.set(socket.id, newRoomId);
+    socket.join(newRoomId);
+    socket.emit("private_room_created", { roomId: newRoomId });
+  });
+
+  socket.on("join_private_room", (data: { name: string, roomId: string }) => {
+    const roomId = data.roomId.toUpperCase();
+    const room = rooms[roomId];
+    
+    if (room && room.status === 'waiting' && room.isPrivate && Object.keys(room.players).length === 1) {
+      room.players[socket.id] = { socketId: socket.id, name: data.name || 'Guest', move: null, score: 0 };
+      room.status = 'playing';
+      room.round = 1;
+      room.draws = 0;
+      playerRoomMap.set(socket.id, roomId);
+      
+      socket.join(roomId);
+
+      io.to(roomId).emit("match_found", {
+        roomId,
+        round: 1,
+        draws: 0,
+        players: Object.values(room.players).map(p => ({ id: p.socketId, name: p.name, score: p.score }))
+      });
+
+      // Delay 3 seconds before starting the first round timeout
+      setTimeout(() => {
+         if (rooms[roomId]) {
+           io.to(roomId).emit("game_starting");
+           rooms[roomId].roundTimeoutId = setTimeout(() => {
+             evaluateRound(roomId, true);
+           }, 10000);
+         }
+      }, 3000);
+
+    } else {
+      socket.emit("join_error", { message: "Oda bulunamadı veya dolu." });
     }
   });
 

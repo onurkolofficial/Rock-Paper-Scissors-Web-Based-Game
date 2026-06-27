@@ -1,11 +1,12 @@
 import { Capacitor } from '@capacitor/core';
 import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
+import { PLAY_GAMES_CONFIG } from '../config/playGames';
 
 export const submitScoreToPlayGames = async (score: number) => {
   if (Capacitor.isNativePlatform()) {
     try {
       await CapacitorGameConnect.submitScore({
-        leaderboardID: 'CgkIua-BqqENEAIQCw', // REPLACE WITH REAL LEADERBOARD ID
+        leaderboardID: PLAY_GAMES_CONFIG.LEADERBOARD_ID, // REPLACE WITH REAL LEADERBOARD ID
         totalScoreAmount: score
       });
       console.log('Score submitted successfully to Play Games:', score);
@@ -25,15 +26,15 @@ export interface Achievement {
 }
 
 export const ACHIEVEMENTS_LIST: Achievement[] = [
-  { id: 't1', playGamesId: 'CgkIua-BqqENEAIQBQ', titleKey: 'ach_t1_title', descKey: 'ach_t1_desc', icon: '🏆', isUnlocked: false },
-  { id: 't2', playGamesId: 'CgkIua-BqqENEAIQBA', titleKey: 'ach_t2_title', descKey: 'ach_t2_desc', icon: '🔥', isUnlocked: false },
-  { id: 't3', playGamesId: 'CgkIua-BqqENEAIQAw', titleKey: 'ach_t3_title', descKey: 'ach_t3_desc', icon: '⚡', isUnlocked: false },
-  { id: 't4', playGamesId: 'CgkIua-BqqENEAIQCg', titleKey: 'ach_t4_title', descKey: 'ach_t4_desc', icon: '🤝', isUnlocked: false },
-  { id: 't5', playGamesId: 'CgkIua-BqqENEAIQBg', titleKey: 'ach_t5_title', descKey: 'ach_t5_desc', icon: '🎯', isUnlocked: false },
-  { id: 't6', playGamesId: 'CgkIua-BqqENEAIQAg', titleKey: 'ach_t6_title', descKey: 'ach_t6_desc', icon: '💰', isUnlocked: false },
-  { id: 't7', playGamesId: 'CgkIua-BqqENEAIQBw', titleKey: 'ach_t7_title', descKey: 'ach_t7_desc', icon: '👥', isUnlocked: false },
-  { id: 't8', playGamesId: 'CgkIua-BqqENEAIQCA', titleKey: 'ach_t8_title', descKey: 'ach_t8_desc', icon: '🛒', isUnlocked: false },
-  { id: 't9', playGamesId: 'CgkIua-BqqENEAIQCQ', titleKey: 'ach_t9_title', descKey: 'ach_t9_desc', icon: '🎒', isUnlocked: false }
+  { id: 't1', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t1, titleKey: 'ach_t1_title', descKey: 'ach_t1_desc', icon: '🏆', isUnlocked: false },
+  { id: 't2', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t2, titleKey: 'ach_t2_title', descKey: 'ach_t2_desc', icon: '🔥', isUnlocked: false },
+  { id: 't3', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t3, titleKey: 'ach_t3_title', descKey: 'ach_t3_desc', icon: '⚡', isUnlocked: false },
+  { id: 't4', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t4, titleKey: 'ach_t4_title', descKey: 'ach_t4_desc', icon: '🤝', isUnlocked: false },
+  { id: 't5', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t5, titleKey: 'ach_t5_title', descKey: 'ach_t5_desc', icon: '🎯', isUnlocked: false },
+  { id: 't6', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t6, titleKey: 'ach_t6_title', descKey: 'ach_t6_desc', icon: '💰', isUnlocked: false },
+  { id: 't7', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t7, titleKey: 'ach_t7_title', descKey: 'ach_t7_desc', icon: '👥', isUnlocked: false },
+  { id: 't8', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t8, titleKey: 'ach_t8_title', descKey: 'ach_t8_desc', icon: '🛒', isUnlocked: false },
+  { id: 't9', playGamesId: PLAY_GAMES_CONFIG.ACHIEVEMENTS.t9, titleKey: 'ach_t9_title', descKey: 'ach_t9_desc', icon: '🎒', isUnlocked: false }
 ];
 
 /**

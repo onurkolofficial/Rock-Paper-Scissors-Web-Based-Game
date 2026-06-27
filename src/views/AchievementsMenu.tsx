@@ -43,7 +43,12 @@ const AchievementsMenu: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full text-slate-100 p-6 relative overflow-hidden font-sans bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col h-[100dvh] w-full text-slate-100 p-6 relative overflow-hidden font-sans bg-transparent"
+    >
       {/* Header */}
       <div className="flex items-center mb-6 z-10 pt-4 shrink-0">
         <button 
@@ -161,7 +166,7 @@ const AchievementsMenu: React.FC = () => {
           ))}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

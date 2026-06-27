@@ -135,7 +135,12 @@ const TwoPlayerGame: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden relative bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden relative bg-transparent"
+    >
       
       {/* Central Divider / Controls */}
       <div className="absolute top-1/2 left-0 right-0 h-16 -mt-8 z-20 flex items-center justify-between px-4 bg-black/40 backdrop-blur-md border-y border-white/5 shadow-2xl">
@@ -292,7 +297,7 @@ const TwoPlayerGame: React.FC = () => {
         )}
       </AnimatePresence>
 
-    </div>
+    </motion.div>
   );
 };
 

@@ -5,6 +5,8 @@ import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
 import { showInterstitialAd } from '../utils/ads';
 import { Achievement } from '../utils/achievements';
+import { PLAY_GAMES_CONFIG } from '../config/playGames';
+import { STORAGE_KEYS } from '../config/storage';
 
 export type Screen = 'menu' | 'single' | 'multi' | 'online' | 'settings' | 'stats' | 'leaderboard' | 'achievements';
 
@@ -34,13 +36,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Try to load user name
   const [userName, setUserName] = useState(() => {
-    return localStorage.getItem('sps_user_name') || '';
+    return localStorage.getItem(STORAGE_KEYS.USER_NAME) || '';
   });
 
   // Try to load user image URL
   const [userImageUrl, setUserImageUrl] = useState(() => {
-    return localStorage.getItem('sps_user_image_url') || '';
+    return localStorage.getItem(STORAGE_KEYS.USER_IMAGE_URL) || '';
   });
+
+  const handleSetUserName = (name: string) => {
+    setUserName(name);
+    localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
+    localStorage.setItem(STORAGE_KEYS.USER_CHANGED_NAME, 'true');
+  };
 
   useEffect(() => {
     // We only initialize Play Games logic
@@ -51,28 +59,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           
           if (result && result.player_name) {
              setIsPlayGamesSignedIn(true);
-             setUserName(result.player_name);
-             localStorage.setItem('sps_user_name', result.player_name);
+             const hasChangedName = localStorage.getItem(STORAGE_KEYS.USER_CHANGED_NAME) === 'true';
+             if (!hasChangedName) {
+               setUserName(result.player_name);
+               localStorage.setItem(STORAGE_KEYS.USER_NAME, result.player_name);
+             }
           }
           
-          let wins = Number(localStorage.getItem('sps_stats_wins') || 0);
-          let draws = Number(localStorage.getItem('sps_stats_draws') || 0);
+          let wins = Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0);
+          let draws = Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0);
           let totalScoreAmount = (wins * 100) + (draws * 20);
           
           try {
             if (totalScoreAmount > 0) {
               await CapacitorGameConnect.submitScore({
-                leaderboardID: 'CgkIua-BqqENEAIQAQ',
+                leaderboardID: PLAY_GAMES_CONFIG.LEADERBOARD_ID,
                 totalScoreAmount: totalScoreAmount
               });
             }
             
-            const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+            const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: PLAY_GAMES_CONFIG.LEADERBOARD_ID });
             if (remoteScore && remoteScore.player_score > totalScoreAmount) {
               const recoveredWins = Math.floor(remoteScore.player_score / 100);
               const recoveredDraws = Math.floor((remoteScore.player_score % 100) / 20);
-              localStorage.setItem('sps_stats_wins', String(recoveredWins));
-              localStorage.setItem('sps_stats_draws', String(recoveredDraws));
+              localStorage.setItem(STORAGE_KEYS.STATS_WINS, String(recoveredWins));
+              localStorage.setItem(STORAGE_KEYS.STATS_DRAWS, String(recoveredDraws));
             }
           } catch (scoreErr) {
             console.warn('Silent Play Games score sync skipped:', scoreErr);
@@ -94,32 +105,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const displayName = result.player_name || 'Oyuncu';
         setIsPlayGamesSignedIn(true);
         
-        let wins = Number(localStorage.getItem('sps_stats_wins') || 0);
-        let draws = Number(localStorage.getItem('sps_stats_draws') || 0);
+        let wins = Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0);
+        let draws = Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0);
         let totalScoreAmount = (wins * 100) + (draws * 20);
         
         try {
           if (totalScoreAmount > 0) {
             await CapacitorGameConnect.submitScore({
-              leaderboardID: 'CgkIua-BqqENEAIQAQ',
+              leaderboardID: PLAY_GAMES_CONFIG.LEADERBOARD_ID,
               totalScoreAmount: totalScoreAmount
             });
           }
           
-          const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+          const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: PLAY_GAMES_CONFIG.LEADERBOARD_ID });
           if (remoteScore && remoteScore.player_score > totalScoreAmount) {
             const recoveredWins = Math.floor(remoteScore.player_score / 100);
             const recoveredDraws = Math.floor((remoteScore.player_score % 100) / 20);
-            localStorage.setItem('sps_stats_wins', String(recoveredWins));
-            localStorage.setItem('sps_stats_draws', String(recoveredDraws));
+            localStorage.setItem(STORAGE_KEYS.STATS_WINS, String(recoveredWins));
+            localStorage.setItem(STORAGE_KEYS.STATS_DRAWS, String(recoveredDraws));
           }
         } catch (scoreError) {
           console.warn('Score sync error:', scoreError);
         }
         
-        localStorage.setItem('sps_user_name', displayName);
-        setUserName(displayName);
-        setUserImageUrl(''); // Clear image as play games doesn't return one directly here
+        const hasChangedName = localStorage.getItem(STORAGE_KEYS.USER_CHANGED_NAME) === 'true';
+        if (!hasChangedName) {
+          localStorage.setItem(STORAGE_KEYS.USER_NAME, displayName);
+          setUserName(displayName);
+        }
+        
+        // Try to fetch profile image via GoogleSignIn on Android since Play Games SDK doesn't expose it here
+        try {
+          const { GoogleSignIn } = await import('@capawesome/capacitor-google-sign-in');
+          await GoogleSignIn.initialize({
+            clientId: '455623071673-11ftsbe7pgvao1etk07dnka66rvobj09.apps.googleusercontent.com',
+            scopes: ['profile', 'email'],
+          });
+          const gResult = await GoogleSignIn.signIn();
+          if (gResult.imageUrl) {
+            localStorage.setItem(STORAGE_KEYS.USER_IMAGE_URL, gResult.imageUrl);
+            setUserImageUrl(gResult.imageUrl);
+          }
+        } catch (imgError) {
+          console.warn('Failed to get profile image via GoogleSignIn on Android:', imgError);
+        }
       } else {
         // Fallback for web if needed
         const { GoogleSignIn } = await import('@capawesome/capacitor-google-sign-in');
@@ -131,9 +160,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const displayName = result.displayName || 'Oyuncu';
         const imageUrl = result.imageUrl || '';
         
-        localStorage.setItem('sps_user_name', displayName);
-        localStorage.setItem('sps_user_image_url', imageUrl);
-        setUserName(displayName);
+        const hasChangedName = localStorage.getItem(STORAGE_KEYS.USER_CHANGED_NAME) === 'true';
+        if (!hasChangedName) {
+          localStorage.setItem(STORAGE_KEYS.USER_NAME, displayName);
+          setUserName(displayName);
+        }
+        localStorage.setItem(STORAGE_KEYS.USER_IMAGE_URL, imageUrl);
         setUserImageUrl(imageUrl);
       }
     } catch (error) {
@@ -157,16 +189,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsPlayGamesSignedIn(false);
     setUserName('');
     setUserImageUrl('');
-    localStorage.removeItem('sps_user_name');
-    localStorage.removeItem('sps_user_image_url');
+    localStorage.removeItem(STORAGE_KEYS.USER_NAME);
+    localStorage.removeItem(STORAGE_KEYS.USER_IMAGE_URL);
+    localStorage.removeItem(STORAGE_KEYS.USER_CHANGED_NAME);
   };
 
   useEffect(() => {
-    localStorage.setItem('sps_user_name', userName);
+    localStorage.setItem(STORAGE_KEYS.USER_NAME, userName);
   }, [userName]);
 
   useEffect(() => {
-    localStorage.setItem('sps_user_image_url', userImageUrl);
+    localStorage.setItem(STORAGE_KEYS.USER_IMAGE_URL, userImageUrl);
   }, [userImageUrl]);
 
   useEffect(() => {
@@ -217,7 +250,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       confirmExit,
       setConfirmExit,
       userName,
-      setUserName,
+      setUserName: handleSetUserName,
       userImageUrl,
       setUserImageUrl,
       loginWithGoogle,

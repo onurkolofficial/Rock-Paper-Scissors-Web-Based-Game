@@ -8,7 +8,7 @@ import { GAME_VERSION } from '../version';
 
 const SettingsMenu: React.FC = () => {
   const { t } = useTranslation();
-  const { navigate } = useAppNavigation();
+  const { navigate, userName, setUserName } = useAppNavigation();
   const { soundEnabled, toggleSound, volume, setVolume, vibrationEnabled, toggleVibration, interstitialAdsEnabled, toggleInterstitialAds, language, changeLanguage, vibrate, playSound } = useSettings();
 
   const handleToggleVibration = () => {
@@ -40,7 +40,12 @@ const SettingsMenu: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] w-full text-slate-100 relative overflow-hidden font-sans bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col min-h-[100dvh] w-full text-slate-100 relative overflow-hidden font-sans bg-transparent"
+    >
       {/* Header */}
       <div className="flex items-center p-4 bg-black/20 border-b border-white/5 backdrop-blur-md z-10">
         <button 
@@ -55,9 +60,21 @@ const SettingsMenu: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6 space-y-6 max-w-lg mx-auto w-full z-10">
+      <div className="flex-1 p-6 space-y-6 max-w-lg mx-auto w-full z-10 overflow-y-auto">
         {/* Preferences */}
         <div className="bg-black/40 border border-white/5 backdrop-blur-sm rounded-2xl p-4 shadow-xl space-y-4">
+          
+          <div className="px-2 pb-4 border-b border-white/10">
+            <span className="block text-xs font-bold uppercase tracking-widest text-white/50 mb-2">{t('settings_player_name')}</span>
+            <input 
+              type="text" 
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder={t('settings_player_name_placeholder')}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-white/30 transition-colors"
+            />
+          </div>
+
           <button 
             onClick={handleToggleSound}
             className="w-full flex justify-between items-center py-3 px-2 active:opacity-70 transition"
@@ -148,7 +165,7 @@ const SettingsMenu: React.FC = () => {
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

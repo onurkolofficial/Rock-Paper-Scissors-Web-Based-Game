@@ -51,21 +51,23 @@ const MainLayout: React.FC = () => {
 
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'menu': return <MainMenu />;
-      case 'single': return <SinglePlayerGame />;
-      case 'multi': return <TwoPlayerGame />;
-      case 'online': return <OnlineMultiplayerGame />;
-      case 'settings': return <SettingsMenu />;
-      case 'stats': return <StatsMenu />;
-      case 'leaderboard': return <LeaderboardMenu />;
-      case 'achievements': return <AchievementsMenu />;
-      default: return <MainMenu />;
+      case 'menu': return <MainMenu key="menu" />;
+      case 'single': return <SinglePlayerGame key="single" />;
+      case 'multi': return <TwoPlayerGame key="multi" />;
+      case 'online': return <OnlineMultiplayerGame key="online" />;
+      case 'settings': return <SettingsMenu key="settings" />;
+      case 'stats': return <StatsMenu key="stats" />;
+      case 'leaderboard': return <LeaderboardMenu key="leaderboard" />;
+      case 'achievements': return <AchievementsMenu key="achievements" />;
+      default: return <MainMenu key="default" />;
     }
   };
 
   return (
     <div className="w-full min-h-[100dvh] bg-gradient-to-br from-[#1c282f] via-[#161a1b] text-white to-[#2d261e] selection:bg-white/20 relative overflow-hidden">
-      {renderScreen()}
+      <AnimatePresence mode="wait">
+        {renderScreen()}
+      </AnimatePresence>
       
       <ConfirmModal 
         isOpen={confirmExit}

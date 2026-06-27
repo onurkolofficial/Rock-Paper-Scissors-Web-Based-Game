@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import i18n from '../i18n';
+import { STORAGE_KEYS } from '../config/storage';
+import { DEFAULT_SETTINGS } from '../config/settings';
 
 interface SettingsContextType {
   soundEnabled: boolean;
@@ -21,19 +23,23 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [soundEnabled, setSoundEnabled] = useState(() => {
-    return localStorage.getItem('sps_sound') !== 'false';
+    const stored = localStorage.getItem(STORAGE_KEYS.SOUND);
+    return stored !== null ? stored !== 'false' : DEFAULT_SETTINGS.SOUND;
   });
   const [volume, setVolumeState] = useState(() => {
-    return parseFloat(localStorage.getItem('sps_volume') || '1.0');
+    const stored = localStorage.getItem(STORAGE_KEYS.VOLUME);
+    return stored !== null ? parseFloat(stored) : DEFAULT_SETTINGS.VOLUME;
   });
   const [vibrationEnabled, setVibrationEnabled] = useState(() => {
-    return localStorage.getItem('sps_vibration') !== 'false';
+    const stored = localStorage.getItem(STORAGE_KEYS.VIBRATION);
+    return stored !== null ? stored !== 'false' : DEFAULT_SETTINGS.VIBRATION;
   });
   const [interstitialAdsEnabled, setInterstitialAdsEnabled] = useState(() => {
-    return localStorage.getItem('sps_ads_interstitial') !== 'false';
+    const stored = localStorage.getItem(STORAGE_KEYS.ADS_INTERSTITIAL);
+    return stored !== null ? stored !== 'false' : DEFAULT_SETTINGS.ADS_INTERSTITIAL;
   });
   const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('sps_lang') || 'tr';
+    return localStorage.getItem(STORAGE_KEYS.LANG) || DEFAULT_SETTINGS.LANG;
   });
 
   const clickAudio = useRef(new Audio('/Game_Effect_Button_Click.mp3'));
@@ -68,12 +74,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleSound = () => {
     const newVal = !soundEnabled;
     setSoundEnabled(newVal);
-    localStorage.setItem('sps_sound', String(newVal));
+    localStorage.setItem(STORAGE_KEYS.SOUND, String(newVal));
   };
 
   const setVolume = (val: number) => {
     setVolumeState(val);
-    localStorage.setItem('sps_volume', String(val));
+    localStorage.setItem(STORAGE_KEYS.VOLUME, String(val));
     if (soundEnabled && bgmAudio.current.paused) {
          bgmAudio.current.play().catch(() => {});
     }
@@ -82,13 +88,13 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const toggleVibration = () => {
     const newVal = !vibrationEnabled;
     setVibrationEnabled(newVal);
-    localStorage.setItem('sps_vibration', String(newVal));
+    localStorage.setItem(STORAGE_KEYS.VIBRATION, String(newVal));
   };
 
   const toggleInterstitialAds = () => {
     const newVal = !interstitialAdsEnabled;
     setInterstitialAdsEnabled(newVal);
-    localStorage.setItem('sps_ads_interstitial', String(newVal));
+    localStorage.setItem(STORAGE_KEYS.ADS_INTERSTITIAL, String(newVal));
   };
 
   useEffect(() => {
@@ -100,7 +106,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLanguage(lang);
     i18n.changeLanguage(lang);
     document.documentElement.lang = lang;
-    localStorage.setItem('sps_lang', lang);
+    localStorage.setItem(STORAGE_KEYS.LANG, lang);
   };
 
   const vibrate = async (type: 'short' | 'normal' | 'long' = 'short') => {

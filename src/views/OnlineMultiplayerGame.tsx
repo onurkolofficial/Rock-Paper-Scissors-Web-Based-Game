@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Wifi } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import AlertModal from '../components/AlertModal';
+import { STORAGE_KEYS } from '../config/storage';
 
 const MoveIcon = ({ move, className }: { move: Move, className?: string }) => {
   if (move === 'rock') return <img src="/gfx_stone.png" alt="Rock" className={className} />;
@@ -21,6 +22,7 @@ const OnlineMultiplayerGame: React.FC = () => {
 
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameMode, setGameMode] = useState<'selection' | 'matchmaking' | 'create_room' | 'join_room' | 'joining_room' | 'in_game'>('selection');
+  const [actionStep, setActionStep] = useState<'connecting' | 'processing' | null>(null);
   const [joinRoomCode, setJoinRoomCode] = useState('');
   const [matchStatus, setMatchStatus] = useState<'connecting' | 'waiting' | 'starting' | 'playing' | 'result' | 'game_over' | 'opponent_disconnected'>('connecting');
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -117,6 +119,7 @@ const OnlineMultiplayerGame: React.FC = () => {
     newSocket.on('join_error', (data: { message: string }) => {
       setJoinErrorMsg(data.message);
       setGameMode('selection');
+      setActionStep(null);
       setMatchStatus('connecting'); // Reset to an initial state logically
     });
 
@@ -184,25 +187,25 @@ const OnlineMultiplayerGame: React.FC = () => {
       
       // Update local storage stats
       if (data.result === 'win') {
-        const totalWins = Number(localStorage.getItem('sps_stats_online_wins') || 0) + 1;
-        localStorage.setItem('sps_stats_online_wins', String(totalWins));
+        const totalWins = Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_WINS) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_WINS, String(totalWins));
       } else if (data.result === 'lose') {
-        const totalLosses = Number(localStorage.getItem('sps_stats_online_losses') || 0) + 1;
-        localStorage.setItem('sps_stats_online_losses', String(totalLosses));
+        const totalLosses = Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_LOSSES) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_LOSSES, String(totalLosses));
       } else if (data.result === 'draw') {
-        const totalDraws = Number(localStorage.getItem('sps_stats_online_draws') || 0) + 1;
-        localStorage.setItem('sps_stats_online_draws', String(totalDraws));
+        const totalDraws = Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_DRAWS) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_DRAWS, String(totalDraws));
       }
       
       // Update last 5 matches history
       try {
-        const historyJson = localStorage.getItem('sps_stats_online_history');
+        const historyJson = localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_HISTORY);
         let history: string[] = historyJson ? JSON.parse(historyJson) : [];
         history.unshift(data.result);
         if (history.length > 5) {
           history = history.slice(0, 5);
         }
-        localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+        localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_HISTORY, JSON.stringify(history));
       } catch (e) {
         console.error('Failed to parse history', e);
       }
@@ -214,15 +217,15 @@ const OnlineMultiplayerGame: React.FC = () => {
       // If we were playing, we get a win
       if (data?.wasPlaying) {
         setFinalResult('win'); // explicit win to show
-        const totalWins = Number(localStorage.getItem('sps_stats_online_wins') || 0) + 1;
-        localStorage.setItem('sps_stats_online_wins', String(totalWins));
+        const totalWins = Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_WINS) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_WINS, String(totalWins));
         
         try {
-          const historyJson = localStorage.getItem('sps_stats_online_history');
+          const historyJson = localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_HISTORY);
           let history: string[] = historyJson ? JSON.parse(historyJson) : [];
           history.unshift('win');
           if (history.length > 5) history = history.slice(0, 5);
-          localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+          localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_HISTORY, JSON.stringify(history));
         } catch (e) {
           console.error('Failed to parse history', e);
         }
@@ -232,14 +235,14 @@ const OnlineMultiplayerGame: React.FC = () => {
     const handleBeforeUnload = () => {
       const currentStatus = matchStatusRef.current;
       if (currentStatus === 'playing' || currentStatus === 'result') {
-         const totalLosses = Number(localStorage.getItem('sps_stats_online_losses') || 0) + 1;
-         localStorage.setItem('sps_stats_online_losses', String(totalLosses));
+         const totalLosses = Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_LOSSES) || 0) + 1;
+         localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_LOSSES, String(totalLosses));
          try {
-           const historyJson = localStorage.getItem('sps_stats_online_history');
+           const historyJson = localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_HISTORY);
            let history: string[] = historyJson ? JSON.parse(historyJson) : [];
            history.unshift('lose');
            if (history.length > 5) history = history.slice(0, 5);
-           localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+           localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_HISTORY, JSON.stringify(history));
          } catch (e) {}
       }
     };
@@ -250,14 +253,14 @@ const OnlineMultiplayerGame: React.FC = () => {
       // Record a loss if the user exits mid-game gracefully.
       const currentStatus = matchStatusRef.current;
       if (currentStatus === 'playing' || currentStatus === 'result') {
-         const totalLosses = Number(localStorage.getItem('sps_stats_online_losses') || 0) + 1;
-         localStorage.setItem('sps_stats_online_losses', String(totalLosses));
+         const totalLosses = Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_LOSSES) || 0) + 1;
+         localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_LOSSES, String(totalLosses));
          try {
-           const historyJson = localStorage.getItem('sps_stats_online_history');
+           const historyJson = localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_HISTORY);
            let history: string[] = historyJson ? JSON.parse(historyJson) : [];
            history.unshift('lose');
            if (history.length > 5) history = history.slice(0, 5);
-           localStorage.setItem('sps_stats_online_history', JSON.stringify(history));
+           localStorage.setItem(STORAGE_KEYS.STATS_ONLINE_HISTORY, JSON.stringify(history));
          } catch (e) {}
       }
       
@@ -292,6 +295,7 @@ const OnlineMultiplayerGame: React.FC = () => {
     playSound('click');
     setMatchStatus('connecting');
     setGameMode('selection');
+    setActionStep(null);
     setRoomId(null);
     setMyMove(null);
     setOpponentMove(null);
@@ -319,9 +323,46 @@ const OnlineMultiplayerGame: React.FC = () => {
   // For simplicity we just use standard 3 moves online
   const ALLOWED_MOVES: Move[] = ['rock', 'paper', 'scissors'];
 
+  const handleAction = (mode: 'create_room' | 'joining_room' | 'matchmaking', emitEvent: string, emitData: any) => {
+    playSound('click');
+    setGameMode(mode);
+    setActionStep('connecting');
+    setMatchStatus('connecting');
+
+    const proceed = () => {
+       setActionStep('processing');
+       setTimeout(() => {
+          socket?.emit(emitEvent, emitData);
+       }, 1000);
+    };
+
+    if (socket?.connected) {
+       proceed();
+    } else {
+       const onConnect = () => {
+          proceed();
+          socket?.off('connect', onConnect);
+       };
+       socket?.on('connect', onConnect);
+    }
+  };
+
+  const getConnectionText = () => {
+     if (actionStep === 'connecting') return t('online_connecting_msg');
+     if (gameMode === 'create_room') return t('online_creating_room_msg');
+     if (gameMode === 'joining_room') return t('online_joining_room_msg');
+     if (gameMode === 'matchmaking') return t('online_finding_match_msg');
+     return t('online_connecting_msg');
+  };
+
   return (
     <>
-    <div className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden relative bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="flex flex-col h-[100dvh] w-full font-sans overflow-hidden relative bg-transparent"
+    >
       {/* Central Divider / Controls */}
       <div className="absolute top-1/2 left-0 right-0 h-16 -mt-8 z-20 flex items-center justify-between px-4 bg-black/40 backdrop-blur-md border-y border-white/5 shadow-2xl">
         <button 
@@ -457,14 +498,13 @@ const OnlineMultiplayerGame: React.FC = () => {
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
-            
             {gameMode === 'selection' && (
               <div className="flex flex-col items-center gap-6 w-full max-w-sm">
                  <h2 className="text-3xl font-bold text-white tracking-widest uppercase mb-8">{t('online_title')}</h2>
-                 <button onClick={() => { playSound('click'); setGameMode('matchmaking'); socket?.emit('join_matchmaking', { name: userName || t('guest') }); }} className="group relative w-full text-center overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
+                 <button onClick={() => handleAction('matchmaking', 'join_matchmaking', { name: userName || t('guest') })} className="group relative w-full text-center overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
                    {t('online_matchmaking')}
                  </button>
-                 <button onClick={() => { playSound('click'); setGameMode('create_room'); socket?.emit('create_private_room', { name: userName || t('guest') })}} className="group relative w-full text-center overflow-hidden bg-purple-600/20 hover:bg-purple-600/30 p-4 rounded-2xl border border-purple-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
+                 <button onClick={() => handleAction('create_room', 'create_private_room', { name: userName || t('guest') })} className="group relative w-full text-center overflow-hidden bg-purple-600/20 hover:bg-purple-600/30 p-4 rounded-2xl border border-purple-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
                    {t('online_create_room')}
                  </button>
                  <button onClick={() => { playSound('click'); setGameMode('join_room'); }} className="group relative w-full text-center overflow-hidden bg-green-600/20 hover:bg-green-600/30 p-4 rounded-2xl border border-green-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide">
@@ -485,11 +525,7 @@ const OnlineMultiplayerGame: React.FC = () => {
                   maxLength={6}
                 />
                 <button 
-                  onClick={() => { 
-                    playSound('click'); 
-                    socket?.emit('join_private_room', { name: userName || t('guest'), roomId: joinRoomCode }); 
-                    setGameMode('joining_room'); // Hide inputs and show connecting
-                  }}
+                  onClick={() => handleAction('joining_room', 'join_private_room', { name: userName || t('guest'), roomId: joinRoomCode })}
                   disabled={joinRoomCode.length < 3}
                   className="group relative w-full text-center overflow-hidden bg-green-600/20 hover:bg-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed p-4 rounded-2xl border border-green-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm text-white font-bold text-lg tracking-wide"
                 >
@@ -532,17 +568,17 @@ const OnlineMultiplayerGame: React.FC = () => {
               </div>
             )}
 
-            {gameMode === 'joining_room' && (
-               <div className="flex flex-col items-center gap-6 w-full max-w-sm">
-                  <Wifi className="w-16 h-16 text-blue-400 animate-pulse" />
-                  <h2 className="text-2xl font-bold text-white text-center tracking-widest uppercase">{t('online_connecting_msg')}</h2>
-               </div>
-            )}
-
-            {matchStatus === 'connecting' && gameMode === 'matchmaking' && (
+            {matchStatus === 'connecting' && (gameMode === 'joining_room' || gameMode === 'matchmaking' || gameMode === 'create_room') && (
                <div className="flex flex-col items-center gap-6 mt-5 w-full max-w-sm">
-                  <Wifi className="w-12 h-12 text-blue-400 animate-pulse" />
-                  <h2 className="text-2xl font-bold text-white text-center tracking-widest uppercase">{t('online_connecting_msg')}</h2>
+                  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 2 }} className="w-32 h-32 mb-4 bg-blue-500/10 rounded-full flex items-center justify-center border-4 border-blue-500/20">
+                    <Wifi className="w-16 h-16 text-blue-400 animate-pulse" />
+                  </motion.div>
+                  <h2 className="text-2xl font-bold text-white text-center tracking-widest uppercase">
+                    {getConnectionText()}
+                  </h2>
+                  <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                     <motion.div className="h-full bg-blue-500" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: 2, repeat: Infinity }} />
+                  </div>
                </div>
             )}
 
@@ -626,7 +662,7 @@ const OnlineMultiplayerGame: React.FC = () => {
         )}
       </AnimatePresence>
 
-    </div>
+    </motion.div>
 
       <AlertModal 
         isOpen={!!joinErrorMsg} 

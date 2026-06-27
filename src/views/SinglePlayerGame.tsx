@@ -8,6 +8,8 @@ import { ArrowLeft, ShoppingBag, Coins, Check, Lock as LockIcon, X } from 'lucid
 import { checkSinglePlayerAchievements, unlockAchievement, submitScoreToPlayGames } from '../utils/achievements';
 
 import StoreModal, { Skin, SKINS_LIST } from '../components/StoreModal';
+import { STORAGE_KEYS } from '../config/storage';
+import { DEFAULT_SETTINGS } from '../config/settings';
 
 const MoveIcon = ({ 
   move, 
@@ -50,35 +52,37 @@ const SinglePlayerGame: React.FC = () => {
   // Shop & Skins state
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [ironCount, setIronCount] = useState<number>(() => {
-    return Number(localStorage.getItem('sps_iron_count') || 0);
+    const stored = localStorage.getItem(STORAGE_KEYS.IRON_COUNT);
+    return stored !== null ? Number(stored) : DEFAULT_SETTINGS.IRON_COUNT;
   });
   const [virtualCash, setVirtualCash] = useState(() => {
-    return Number(localStorage.getItem('sps_stats_cash') || 0);
+    const stored = localStorage.getItem(STORAGE_KEYS.STATS_CASH);
+    return stored !== null ? Number(stored) : DEFAULT_SETTINGS.STATS_CASH;
   });
   const [ownedSkins, setOwnedSkins] = useState<string[]>(() => {
-    const list = localStorage.getItem('sps_owned_skins');
-    return list ? JSON.parse(list) : ['default'];
+    const list = localStorage.getItem(STORAGE_KEYS.OWNED_SKINS);
+    return list ? JSON.parse(list) : DEFAULT_SETTINGS.OWNED_SKINS;
   });
   const [activeSkinId, setActiveSkinId] = useState(() => {
-    return localStorage.getItem('sps_active_skin') || 'default';
+    return localStorage.getItem(STORAGE_KEYS.ACTIVE_SKIN) || DEFAULT_SETTINGS.ACTIVE_SKIN;
   });
 
   const activeSkin = SKINS_LIST.find(s => s.id === activeSkinId) || SKINS_LIST[0];
 
   useEffect(() => {
-    localStorage.setItem('sps_stats_cash', String(virtualCash));
+    localStorage.setItem(STORAGE_KEYS.STATS_CASH, String(virtualCash));
   }, [virtualCash]);
 
   useEffect(() => {
-    localStorage.setItem('sps_iron_count', String(ironCount));
+    localStorage.setItem(STORAGE_KEYS.IRON_COUNT, String(ironCount));
   }, [ironCount]);
 
   useEffect(() => {
-    localStorage.setItem('sps_owned_skins', JSON.stringify(ownedSkins));
+    localStorage.setItem(STORAGE_KEYS.OWNED_SKINS, JSON.stringify(ownedSkins));
   }, [ownedSkins]);
 
   useEffect(() => {
-    localStorage.setItem('sps_active_skin', activeSkinId);
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_SKIN, activeSkinId);
   }, [activeSkinId]);
 
   // Hook up the global back button interceptor to close the shop if open
@@ -137,11 +141,11 @@ const SinglePlayerGame: React.FC = () => {
         setStreak(nextStreak);
         
         // Update stats matches wins
-        const totalWins = Number(localStorage.getItem('sps_stats_wins') || 0) + 1;
-        localStorage.setItem('sps_stats_wins', String(totalWins));
+        const totalWins = Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_WINS, String(totalWins));
         
         // Submit the updated high score to Play Games leaderboard!
-        const totalDrawsValue = Number(localStorage.getItem('sps_stats_draws') || 0);
+        const totalDrawsValue = Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0);
         submitScoreToPlayGames((totalWins * 100) + (totalDrawsValue * 20));
         
         // Reward $100 Cash per win
@@ -160,14 +164,14 @@ const SinglePlayerGame: React.FC = () => {
         setScore(s => ({ ...s, computer: s.computer + 1 }));
         setStreak(0);
         
-        const totalLosses = Number(localStorage.getItem('sps_stats_losses') || 0) + 1;
-        localStorage.setItem('sps_stats_losses', String(totalLosses));
+        const totalLosses = Number(localStorage.getItem(STORAGE_KEYS.STATS_LOSSES) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_LOSSES, String(totalLosses));
         
         playSound('lose');
         vibrate('long');
 
-        const totalWins = Number(localStorage.getItem('sps_stats_wins') || 0);
-        const totalDraws = Number(localStorage.getItem('sps_stats_draws') || 0);
+        const totalWins = Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0);
+        const totalDraws = Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0);
         checkSinglePlayerAchievements(0, totalWins, totalDraws, (ach) => {
           setAchievementToast(ach);
         });
@@ -177,13 +181,13 @@ const SinglePlayerGame: React.FC = () => {
         setScore(s => ({ ...s, draws: nextDraws }));
         setStreak(0);
         
-        const totalDraws = Number(localStorage.getItem('sps_stats_draws') || 0) + 1;
-        localStorage.setItem('sps_stats_draws', String(totalDraws));
+        const totalDraws = Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0) + 1;
+        localStorage.setItem(STORAGE_KEYS.STATS_DRAWS, String(totalDraws));
 
         playSound('draw');
         vibrate('normal');
 
-        const totalWins = Number(localStorage.getItem('sps_stats_wins') || 0);
+        const totalWins = Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0);
         
         // Let draws increase the leaderboard score by 20 points
         submitScoreToPlayGames((totalWins * 100) + (totalDraws * 20));
@@ -249,7 +253,12 @@ const SinglePlayerGame: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full font-sans text-slate-100 overflow-hidden relative bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="flex flex-col h-[100dvh] w-full font-sans text-slate-100 overflow-hidden relative bg-transparent"
+    >
       {/* Unified Upper Navigation Header */}
       <div className="flex items-center justify-between p-3 sm:p-4 bg-black/20 backdrop-blur-md border-b border-white/5 absolute top-0 w-full z-10 gap-2">
         <button 
@@ -264,7 +273,7 @@ const SinglePlayerGame: React.FC = () => {
           <div className="flex items-center gap-1">
             <span className="text-[8px] sm:text-[9px] uppercase tracking-wider text-green-400 font-extrabold">{t('score_label')}</span>
             <span className="text-xs sm:text-xs font-black font-mono text-green-300">
-              {((Number(localStorage.getItem('sps_stats_wins') || 0) * 100) + (Number(localStorage.getItem('sps_stats_draws') || 0) * 20)).toLocaleString()}
+              {((Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0) * 100) + (Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0) * 20)).toLocaleString()}
             </span>
           </div>
 
@@ -426,7 +435,7 @@ const SinglePlayerGame: React.FC = () => {
         onPurchaseIron={handlePurchaseIron}
         onEquipSkin={handleEquipSkin}
       />
-    </div>
+    </motion.div>
   );
 };
 

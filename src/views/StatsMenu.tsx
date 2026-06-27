@@ -4,6 +4,7 @@ import { useAppNavigation } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Percent, Trophy, Minus, XCircle, Clock, Check, X } from 'lucide-react';
+import { STORAGE_KEYS } from '../config/storage';
 
 const StatsMenu: React.FC = () => {
   const { t } = useTranslation();
@@ -24,16 +25,16 @@ const StatsMenu: React.FC = () => {
   const [onlineHistory, setOnlineHistory] = useState<string[]>([]);
 
   useEffect(() => {
-    setSingleWins(Number(localStorage.getItem('sps_stats_wins') || 0));
-    setSingleDraws(Number(localStorage.getItem('sps_stats_draws') || 0));
-    setSingleLosses(Number(localStorage.getItem('sps_stats_losses') || 0));
+    setSingleWins(Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0));
+    setSingleDraws(Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0));
+    setSingleLosses(Number(localStorage.getItem(STORAGE_KEYS.STATS_LOSSES) || 0));
     
-    setOnlineWins(Number(localStorage.getItem('sps_stats_online_wins') || 0));
-    setOnlineDraws(Number(localStorage.getItem('sps_stats_online_draws') || 0));
-    setOnlineLosses(Number(localStorage.getItem('sps_stats_online_losses') || 0));
+    setOnlineWins(Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_WINS) || 0));
+    setOnlineDraws(Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_DRAWS) || 0));
+    setOnlineLosses(Number(localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_LOSSES) || 0));
     
     try {
-      const historyJson = localStorage.getItem('sps_stats_online_history');
+      const historyJson = localStorage.getItem(STORAGE_KEYS.STATS_ONLINE_HISTORY);
       if (historyJson) {
         setOnlineHistory(JSON.parse(historyJson));
       }
@@ -69,7 +70,12 @@ const StatsMenu: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[100dvh] w-full text-slate-100 relative overflow-hidden font-sans bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col min-h-[100dvh] w-full text-slate-100 relative overflow-hidden font-sans bg-transparent"
+    >
       {/* Header */}
       <div className="flex items-center p-4 bg-black/20 border-b border-white/5 backdrop-blur-md z-10">
         <button 
@@ -175,7 +181,7 @@ const StatsMenu: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

@@ -1,0 +1,21 @@
+export const STORAGE_KEYS = {
+  USER_NAME: 'sps_user_name',
+  USER_IMAGE_URL: 'sps_user_image_url',
+  STATS_WINS: 'sps_stats_wins',
+  STATS_DRAWS: 'sps_stats_draws',
+  STATS_LOSSES: 'sps_stats_losses',
+  STATS_ONLINE_WINS: 'sps_stats_online_wins',
+  STATS_ONLINE_DRAWS: 'sps_stats_online_draws',
+  STATS_ONLINE_LOSSES: 'sps_stats_online_losses',
+  STATS_ONLINE_HISTORY: 'sps_stats_online_history',
+  SOUND: 'sps_sound',
+  VOLUME: 'sps_volume',
+  VIBRATION: 'sps_vibration',
+  ADS_INTERSTITIAL: 'sps_ads_interstitial',
+  LANG: 'sps_lang',
+  IRON_COUNT: 'sps_iron_count',
+  STATS_CASH: 'sps_stats_cash',
+  OWNED_SKINS: 'sps_owned_skins',
+  ACTIVE_SKIN: 'sps_active_skin',
+  USER_CHANGED_NAME: 'sps_user_changed_name'
+};

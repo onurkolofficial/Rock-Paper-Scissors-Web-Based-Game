@@ -7,6 +7,8 @@ import { ArrowLeft, Trophy, ExternalLink } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { submitScoreToPlayGames } from '../utils/achievements';
 import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
+import { PLAY_GAMES_CONFIG } from '../config/playGames';
+import { STORAGE_KEYS } from '../config/storage';
 
 const defaultLeaderboardData: Array<{ rank: number; name: string; score: number; isCurrentPlayer: boolean }> = [];
 
@@ -18,8 +20,8 @@ const LeaderboardMenu: React.FC = () => {
 
   useEffect(() => {
     // Current user's real wins and draws from localStorage
-    const wins = Number(localStorage.getItem('sps_stats_wins') || 0);
-    const draws = Number(localStorage.getItem('sps_stats_draws') || 0);
+    const wins = Number(localStorage.getItem(STORAGE_KEYS.STATS_WINS) || 0);
+    const draws = Number(localStorage.getItem(STORAGE_KEYS.STATS_DRAWS) || 0);
     let localScore = (wins * 100) + (draws * 20);
     
     // Check if we are on Android & attempt to sync or pull
@@ -29,7 +31,7 @@ const LeaderboardMenu: React.FC = () => {
           // Attempt to submit local fresh score before view
           await submitScoreToPlayGames(localScore);
 
-          const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
+          const remoteScore = await CapacitorGameConnect.getUserTotalScore({ leaderboardID: PLAY_GAMES_CONFIG.LEADERBOARD_ID });
           if (remoteScore && remoteScore.player_score > localScore) {
             localScore = remoteScore.player_score;
           }
@@ -57,7 +59,12 @@ const LeaderboardMenu: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full text-slate-100 p-6 relative overflow-hidden font-sans bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col h-[100dvh] w-full text-slate-100 p-6 relative overflow-hidden font-sans bg-transparent"
+    >
       {/* Header */}
       <div className="flex items-center mb-6 z-10 pt-4 shrink-0">
         <button 
@@ -119,7 +126,7 @@ const LeaderboardMenu: React.FC = () => {
           ))}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

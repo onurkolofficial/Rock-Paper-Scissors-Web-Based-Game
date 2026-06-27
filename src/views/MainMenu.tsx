@@ -9,6 +9,7 @@ import AlertModal from '../components/AlertModal';
 import { showBanner, hideBanner } from '../utils/ads';
 import { Capacitor } from '@capacitor/core';
 import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
+import { PLAY_GAMES_CONFIG } from '../config/playGames';
 
 const MainMenu: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -56,37 +57,21 @@ const MainMenu: React.FC = () => {
 
   const handleShowLeaderboard = async () => {
     playSound('click');
-    if (Capacitor.isNativePlatform()) {
-      try {
-        // Check if we can sign in first, natively. If this throws, we fallback to custom UI.
-        await CapacitorGameConnect.signIn();
-        await CapacitorGameConnect.showLeaderboard({ leaderboardID: 'CgkIua-BqqENEAIQAQ' });
-      } catch (e) {
-        console.warn('Native leaderboard not supported or not signed in:', e);
-        navigate('leaderboard');
-      }
-    } else {
-      navigate('leaderboard');
-    }
+    navigate('leaderboard');
   };
 
   const handleShowAchievements = async () => {
     playSound('click');
-    if (Capacitor.isNativePlatform()) {
-      try {
-        await CapacitorGameConnect.signIn();
-        await CapacitorGameConnect.showAchievements();
-      } catch (e) {
-        console.warn('Native achievements not supported or not signed in:', e);
-        navigate('achievements');
-      }
-    } else {
-      navigate('achievements');
-    }
+    navigate('achievements');
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[100dvh] w-full text-slate-100 p-6 pt-10 sm:pt-6 relative overflow-hidden font-sans bg-transparent">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex flex-col items-center justify-center min-h-[100dvh] w-full text-slate-100 p-6 pt-10 sm:pt-6 relative overflow-hidden font-sans bg-transparent"
+    >
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -230,7 +215,7 @@ const MainMenu: React.FC = () => {
         message={errorMsg || ''}
         onClose={() => setErrorMsg(null)}
       />
-    </div>
+    </motion.div>
   );
 };
 

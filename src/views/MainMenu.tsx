@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useAppNavigation } from '../contexts/AppContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion } from 'motion/react';
-import { Play, Users, Settings as SettingsIcon, LogOut, LogIn, BarChart2, Gamepad2, Globe } from 'lucide-react';
+import { Play, Users, Settings as SettingsIcon, LogOut, LogIn, BarChart2, Gamepad2, Globe, Cloud } from 'lucide-react';
+import { io } from 'socket.io-client';
 import { App as CapacitorApp } from '@capacitor/app';
 import AlertModal from '../components/AlertModal';
 import { showBanner, hideBanner } from '../utils/ads';
@@ -35,6 +36,23 @@ const MainMenu: React.FC = () => {
   };
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [onlinePlayers, setOnlinePlayers] = useState<number | null>(null);
+
+  useEffect(() => {
+    const socket = io(window.location.origin);
+    
+    socket.on('connect', () => {
+      socket.emit('request_player_count');
+    });
+
+    socket.on('player_count', (data: { count: number }) => {
+      setOnlinePlayers(data.count);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const handleGoogleLoginMock = async () => {
     playSound('click');
@@ -77,10 +95,10 @@ const MainMenu: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md flex flex-col items-center text-center mt-6 mb-10 z-10"
       >
-        <h1 className="text-[42px] font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-2 leading-none">
+        <h1 className="text-[36px] font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-[6px] leading-[36px]">
           {toUpper(t('app_name'))}
         </h1>
-        <p className="text-slate-400 font-black text-sm tracking-widest uppercase mt-2">
+        <p className="text-slate-400 font-black text-[12px] leading-[16px] tracking-widest uppercase mt-[6px]">
           {userName ? userName : t('guest')}
         </p>
       </motion.div>
@@ -89,7 +107,7 @@ const MainMenu: React.FC = () => {
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 gap-4 w-full max-w-md z-10 -mt-[20px]"
+        className="grid grid-cols-1 gap-4 w-full max-w-md z-10 -mt-[21px]"
       >
         <button
           onClick={() => navigateWithSound('single')}
@@ -125,14 +143,25 @@ const MainMenu: React.FC = () => {
             <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
               <Globe className="w-6 h-6 text-blue-400" />
             </div>
-            <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_online_multiplayer'))}</span>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_online_multiplayer'))}</span>
+              {onlinePlayers !== null && (
+                <span className="text-blue-400/80 text-[10px] font-bold flex items-center gap-1.5 mt-0.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  {onlinePlayers} {toUpper(t('online_players_count') || 'ÇEVRİM İÇİ')}
+                </span>
+              )}
+            </div>
           </div>
           <span className="text-blue-400/50 text-[10px] font-mono hidden sm:block">SERVER</span>
         </button>
 
         {userName ? (
           <div className="flex flex-col bg-black/40 border border-white/5 p-4 rounded-2xl shadow-xl mt-[0px] backdrop-blur-sm">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex justify-between items-center mb-[1px]">
               <div className="flex items-center gap-3">
                 {userImageUrl ? (
                   <img 
@@ -175,6 +204,13 @@ const MainMenu: React.FC = () => {
                  <span className="tracking-widest">{t('achievements') || 'HEDEFLER'}</span>
               </button>
             </div>
+            <button
+          onClick={() => { playSound('click'); navigate('settings'); }}
+          className="w-full bg-blue-900/20 hover:bg-blue-900/30 active:scale-95 transition-all px-4 py-3 rounded-xl flex items-center justify-center gap-2 border border-blue-500/20 mt-2 backdrop-blur-sm"
+        >
+          <Cloud className="w-4 h-4 text-blue-400" />
+          <span className="text-[10px] font-bold text-blue-400 tracking-widest">{toUpper(t('settings_drive_button') || 'DRIVE YEDEKLEME')}</span>
+        </button>
           </div>
         ) : (
           <button 
@@ -186,7 +222,7 @@ const MainMenu: React.FC = () => {
           </button>
         )}
 
-        <div className="grid grid-cols-3 gap-2 mt-1">
+        <div className="grid grid-cols-3 gap-2 mt-[0px]">
           <button
             onClick={() => navigateWithSound('stats')}
             className="w-full bg-black/40 border border-white/5 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-white/80 active:scale-95 transition-all backdrop-blur-sm"
@@ -208,6 +244,7 @@ const MainMenu: React.FC = () => {
             <LogOut className="w-5 h-5" /> {toUpper(t('menu_exit'))}
           </button>
         </div>
+
       </motion.div>
       <AlertModal 
         isOpen={!!errorMsg} 

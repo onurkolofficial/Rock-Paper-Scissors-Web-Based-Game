@@ -1,15 +1,102 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAppNavigation } from '../contexts/AppContext';
 import { motion } from 'motion/react';
-import { ArrowLeft, Volume2, VolumeX, Vibrate, VibrateOff, Info } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, Vibrate, VibrateOff, Info, CloudUpload, CloudDownload, LogOut } from 'lucide-react';
 import { GAME_VERSION } from '../version';
+import { googleSignIn, getAccessToken, initAuth, firebaseLogout } from '../config/firebaseAuth';
+import { syncDataToDrive, syncDataFromDrive } from '../config/googleDriveSave';
+import { getAllLocalData, applyAllLocalData } from '../config/storage';
+import AlertModal from '../components/AlertModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 const SettingsMenu: React.FC = () => {
   const { t } = useTranslation();
   const { navigate, userName, setUserName } = useAppNavigation();
   const { soundEnabled, toggleSound, volume, setVolume, vibrationEnabled, toggleVibration, interstitialAdsEnabled, toggleInterstitialAds, language, changeLanguage, vibrate, playSound } = useSettings();
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{title: string, msg: string} | null>(null);
+  const [needsAuth, setNeedsAuth] = useState(true);
+  
+  const [confirmAction, setConfirmAction] = useState<'upload' | 'download' | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      () => setNeedsAuth(false),
+      () => setNeedsAuth(true)
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleSyncError = (err: any) => {
+    setSyncMessage({
+      title: toUpper(t('settings_drive_error_title') || 'HATA'),
+      msg: err.message || 'Google Drive sync failed.'
+    });
+  };
+
+  const executeUpload = async () => {
+    setIsSyncing(true);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const result = await googleSignIn();
+        token = result?.accessToken || null;
+      }
+      if (token) {
+        setNeedsAuth(false);
+        const localData = getAllLocalData();
+        await syncDataToDrive(token, localData);
+        setSyncMessage({
+          title: toUpper(t('settings_drive_success_title') || 'BAŞARILI'),
+          msg: t('settings_drive_success_upload') || 'Veriler Google Drive hesabınıza yedeklendi.'
+        });
+      }
+    } catch (err) {
+      handleSyncError(err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const executeDownload = async () => {
+    setIsSyncing(true);
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const result = await googleSignIn();
+        token = result?.accessToken || null;
+      }
+      if (token) {
+        setNeedsAuth(false);
+        const cloudData = await syncDataFromDrive(token);
+        if (cloudData) {
+          applyAllLocalData(cloudData);
+          setSyncMessage({
+            title: toUpper(t('settings_drive_success_title') || 'BAŞARILI'),
+            msg: t('settings_drive_success_download') || 'Veriler geri yüklendi. Değişikliklerin etkili olması için uygulamayı yeniden başlatın.'
+          });
+        } else {
+          setSyncMessage({
+            title: toUpper(t('settings_drive_error_title') || 'HATA'),
+            msg: t('settings_drive_error_not_found') || 'Google Drive hesabınızda kayıtlı veri bulunamadı.'
+          });
+        }
+      }
+    } catch (err) {
+      handleSyncError(err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleFirebaseLogout = async () => {
+    playSound('click');
+    await firebaseLogout();
+    setNeedsAuth(true);
+  };
 
   const handleToggleVibration = () => {
     playSound('click');
@@ -36,7 +123,7 @@ const SettingsMenu: React.FC = () => {
 
   const toUpper = (str: string) => {
     if (!str) return '';
-    return str.toLocaleUpperCase('tr-TR');
+    return language === 'tr' ? str.toLocaleUpperCase('tr-TR') : str.toUpperCase();
   };
 
   return (
@@ -153,6 +240,40 @@ const SettingsMenu: React.FC = () => {
           </div>
         </div>
 
+        {/* Sync Data */}
+        <div className="bg-black/40 border border-white/5 backdrop-blur-sm rounded-2xl p-4 shadow-xl space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <span className="block text-xs font-bold uppercase tracking-widest text-white/50">{t('settings_drive_sync') || 'GOOGLE DRIVE SYNC'}</span>
+            {!needsAuth && (
+              <button onClick={handleFirebaseLogout} className="text-[10px] text-red-400 font-bold uppercase flex items-center gap-1 active:scale-95 transition-all">
+                <LogOut className="w-3 h-3" />
+                {t('settings_drive_disconnect') || 'BAĞLANTIYI KES'}
+              </button>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => { playSound('click'); setConfirmAction('upload'); }}
+              disabled={isSyncing}
+              className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/20 py-3 rounded-xl flex flex-col items-center justify-center gap-2 text-xs font-bold text-blue-400 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <CloudUpload className="w-5 h-5" />
+              <span>{isSyncing && confirmAction === 'upload' ? (t('settings_drive_uploading') || 'YÜKLENİYOR...') : (t('settings_drive_upload') || 'YEDEKLE')}</span>
+            </button>
+            <button
+              onClick={() => { playSound('click'); setConfirmAction('download'); }}
+              disabled={isSyncing}
+              className="flex-1 bg-green-600/20 hover:bg-green-600/30 border border-green-500/20 py-3 rounded-xl flex flex-col items-center justify-center gap-2 text-xs font-bold text-green-400 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <CloudDownload className="w-5 h-5" />
+              <span>{isSyncing && confirmAction === 'download' ? (t('settings_drive_downloading') || 'İNDİRİLİYOR...') : (t('settings_drive_download') || 'GERİ YÜKLE')}</span>
+            </button>
+          </div>
+          <p className="text-[10px] text-white/40 text-center font-mono leading-relaxed mt-2 px-2">
+            {t('settings_drive_desc') || "İlerlemeni ve istatistiklerini Google Drive hesabında gizli klasöre yedekleyebilir veya geri yükleyebilirsin."}
+          </p>
+        </div>
+
         {/* About */}
         <div className="bg-black/40 border border-white/5 backdrop-blur-sm rounded-2xl p-6 shadow-xl flex flex-col items-center text-center space-y-3">
           <Info className="w-8 h-8 text-white mb-2" />
@@ -165,6 +286,29 @@ const SettingsMenu: React.FC = () => {
           </p>
         </div>
       </div>
+      <AlertModal 
+        isOpen={!!syncMessage} 
+        title={syncMessage?.title || ''}
+        message={syncMessage?.msg || ''}
+        onClose={() => {
+          setSyncMessage(null);
+          if (syncMessage?.title === 'BAŞARILI' && confirmAction === 'download') {
+            window.location.reload();
+          }
+        }}
+      />
+      <ConfirmModal
+        isOpen={!!confirmAction && !isSyncing}
+        message={confirmAction === 'upload' 
+          ? (t('settings_drive_confirm_upload') || "İlerleyişin Google Drive'a yüklensin mi? (Önceki yedeğin üzerine yazılır)")
+          : (t('settings_drive_confirm_download') || "Yedeğin Google Drive'dan geri yüklensin mi? (Mevcut yerel ilerleyişinin üzerine yazılır)")
+        }
+        onConfirm={() => {
+          if (confirmAction === 'upload') executeUpload();
+          if (confirmAction === 'download') executeDownload();
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
     </motion.div>
   );
 };

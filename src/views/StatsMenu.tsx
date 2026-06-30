@@ -9,7 +9,7 @@ import { STORAGE_KEYS } from '../config/storage';
 const StatsMenu: React.FC = () => {
   const { t } = useTranslation();
   const { navigate } = useAppNavigation();
-  const { playSound } = useSettings();
+  const { language, playSound } = useSettings();
 
   const [activeTab, setActiveTab] = useState<'single' | 'online'>('single');
   
@@ -61,7 +61,7 @@ const StatsMenu: React.FC = () => {
 
   const toUpper = (str: string) => {
     if (!str) return '';
-    return str.toLocaleUpperCase('tr-TR');
+    return language === 'tr' ? str.toLocaleUpperCase('tr-TR') : str.toUpperCase();
   };
 
   const handleTabChange = (tab: 'single' | 'online') => {

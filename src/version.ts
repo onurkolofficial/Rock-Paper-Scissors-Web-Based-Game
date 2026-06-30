@@ -1,3 +1,3 @@
-const VERSION_CODE = "25"
-const VERSION_NAME = "3.3.7"
+const VERSION_CODE = "26"
+const VERSION_NAME = "3.4.0"
 export const GAME_VERSION = VERSION_NAME + '.' + VERSION_CODE;

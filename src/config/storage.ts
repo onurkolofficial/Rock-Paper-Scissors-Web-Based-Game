@@ -19,3 +19,24 @@ export const STORAGE_KEYS = {
   ACTIVE_SKIN: 'sps_active_skin',
   USER_CHANGED_NAME: 'sps_user_changed_name'
 };
+
+export const getAllLocalData = (): Record<string, string> => {
+  const data: Record<string, string> = {};
+  for (const key of Object.values(STORAGE_KEYS)) {
+    const val = localStorage.getItem(key);
+    if (val !== null) {
+      data[key] = val;
+    }
+  }
+  return data;
+};
+
+export const applyAllLocalData = (data: Record<string, string>) => {
+  if (!data) return;
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== null && value !== undefined) {
+      localStorage.setItem(key, value);
+    }
+  }
+};
+

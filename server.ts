@@ -32,6 +32,8 @@ interface Room {
 const rooms: Record<string, Room> = {};
 const playerRoomMap = new Map<string, string>(); // socketId -> roomId
 
+let onlinePlayerCount = 0;
+
 const getOutcome = (m1: string, m2: string): 'win' | 'lose' | 'draw' => {
   if (m1 === m2) return 'draw';
   if (
@@ -161,6 +163,13 @@ const evaluateRound = (roomId: string, isTimeout: boolean = false) => {
 
 io.on("connection", (socket: Socket) => {
   console.log("Client connected:", socket.id);
+  
+  onlinePlayerCount++;
+  io.emit("player_count", { count: onlinePlayerCount });
+
+  socket.on("request_player_count", () => {
+    socket.emit("player_count", { count: onlinePlayerCount });
+  });
 
   socket.on("join_matchmaking", (data: { name: string }) => {
     let joinedRoom = null;
@@ -308,6 +317,8 @@ io.on("connection", (socket: Socket) => {
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
+    onlinePlayerCount = Math.max(0, onlinePlayerCount - 1);
+    io.emit("player_count", { count: onlinePlayerCount });
     const roomId = playerRoomMap.get(socket.id);
     if (roomId) {
       const room = rooms[roomId];

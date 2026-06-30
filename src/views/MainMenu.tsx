@@ -1,20 +1,39 @@
-import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useAppNavigation } from '../contexts/AppContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { motion } from 'motion/react';
-import { Play, Users, Settings as SettingsIcon, LogOut, LogIn, BarChart2, Gamepad2, Globe, Cloud } from 'lucide-react';
-import { io } from 'socket.io-client';
-import { App as CapacitorApp } from '@capacitor/app';
-import AlertModal from '../components/AlertModal';
-import { showBanner, hideBanner } from '../utils/ads';
-import { Capacitor } from '@capacitor/core';
-import { CapacitorGameConnect } from '@openforge/capacitor-game-connect';
-import { PLAY_GAMES_CONFIG } from '../config/playGames';
+import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { useAppNavigation } from "../contexts/AppContext";
+import { useSettings } from "../contexts/SettingsContext";
+import { motion } from "motion/react";
+import {
+  Play,
+  Users,
+  Settings as SettingsIcon,
+  LogOut,
+  LogIn,
+  BarChart2,
+  Gamepad2,
+  Globe,
+  Cloud,
+  Check,
+} from "lucide-react";
+import { io } from "socket.io-client";
+import { App as CapacitorApp } from "@capacitor/app";
+import AlertModal from "../components/AlertModal";
+import { showBanner, hideBanner } from "../utils/ads";
+import { Capacitor } from "@capacitor/core";
+import { CapacitorGameConnect } from "@openforge/capacitor-game-connect";
+import { PLAY_GAMES_CONFIG } from "../config/playGames";
 
 const MainMenu: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { navigate, userName, setUserName, userImageUrl, setUserImageUrl, loginWithGoogle, logout } = useAppNavigation();
+  const {
+    navigate,
+    userName,
+    setUserName,
+    userImageUrl,
+    setUserImageUrl,
+    loginWithGoogle,
+    logout,
+  } = useAppNavigation();
 
   const { toggleSound, playSound } = useSettings();
 
@@ -26,26 +45,31 @@ const MainMenu: React.FC = () => {
   }, []);
 
   const handleExit = () => {
-    playSound('click');
+    playSound("click");
     CapacitorApp.exitApp();
   };
 
   const toUpper = (str: string) => {
-    if (!str) return '';
-    return str.toLocaleUpperCase(i18n.language === 'tr' ? 'tr-TR' : 'en-US');
+    if (!str) return "";
+    return str.toLocaleUpperCase(i18n.language === "tr" ? "tr-TR" : "en-US");
   };
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [onlinePlayers, setOnlinePlayers] = useState<number | null>(null);
 
   useEffect(() => {
-    const socket = io(window.location.origin);
-    
-    socket.on('connect', () => {
-      socket.emit('request_player_count');
+    const socketUrl =
+      import.meta.env.VITE_SERVER_URL ||
+      (Capacitor.isNativePlatform()
+        ? "https://ais-pre-krvzfwmorvyucwdfnc2p6j-731883338395.europe-west2.run.app"
+        : window.location.origin);
+    const socket = io(socketUrl);
+
+    socket.on("connect", () => {
+      socket.emit("request_player_count");
     });
 
-    socket.on('player_count', (data: { count: number }) => {
+    socket.on("player_count", (data: { count: number }) => {
       setOnlinePlayers(data.count);
     });
 
@@ -54,37 +78,114 @@ const MainMenu: React.FC = () => {
     };
   }, []);
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{
+    title: string;
+    msg: string;
+  } | null>(null);
+
+  const handleDriveSync = async () => {
+    playSound("click");
+    setIsSyncing(true);
+    setSyncSuccess(false);
+    try {
+      const { GoogleSignIn } =
+        await import("@capawesome/capacitor-google-sign-in");
+      await GoogleSignIn.initialize({
+        clientId:
+          "455623071673-11ftsbe7pgvao1etk07dnka66rvobj09.apps.googleusercontent.com",
+        scopes: [
+          "profile",
+          "email",
+          "https://www.googleapis.com/auth/drive.appdata",
+        ],
+      });
+      const gResult = await GoogleSignIn.signIn();
+      const token = gResult.accessToken;
+
+      if (!token) {
+        throw new Error(
+          "Erişim belirteci (Access Token) alınamadı. Lütfen tekrar deneyin.",
+        );
+      }
+
+      const { syncDataToDrive, syncDataFromDrive } =
+        await import("../config/googleDriveSave");
+      const { getAllLocalData, applyAllLocalData } =
+        await import("../config/storage");
+
+      const cloudData = await syncDataFromDrive(token);
+      const localData = getAllLocalData();
+
+      const localWins =
+        Number(localData["sps_stats_wins"] || 0) +
+        Number(localData["sps_stats_multi_wins"] || 0);
+      const cloudWins = cloudData
+        ? Number(cloudData["sps_stats_wins"] || 0) +
+          Number(cloudData["sps_stats_multi_wins"] || 0)
+        : 0;
+
+      let reloadNeeded = false;
+
+      if (cloudData && cloudWins > localWins) {
+        applyAllLocalData(cloudData);
+        reloadNeeded = true;
+      } else {
+        await syncDataToDrive(token, localData);
+      }
+
+      setSyncSuccess(true);
+      setTimeout(() => {
+        setSyncSuccess(false);
+        if (reloadNeeded) {
+          window.location.reload();
+        }
+      }, 6000);
+    } catch (err: any) {
+      console.error("Drive Sync Error:", err);
+      setSyncMessage({
+        title: toUpper(t("settings_drive_error_title") || "HATA"),
+        msg: err.message || "Google Drive sync failed.",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleGoogleLoginMock = async () => {
-    playSound('click');
+    playSound("click");
     try {
       await loginWithGoogle();
     } catch (err) {
-      setErrorMsg(t('login_error_message') || 'Google Play Oyunlar ile giriş yapılamadı.');
+      setErrorMsg(
+        t("login_error_message") || "Google Play Oyunlar ile giriş yapılamadı.",
+      );
     }
   };
 
   const handleGoogleLogoutMock = async () => {
-    playSound('click');
+    playSound("click");
     await logout();
   };
 
   const navigateWithSound = (view: any) => {
-    playSound('click');
+    playSound("click");
     navigate(view);
   };
 
   const handleShowLeaderboard = async () => {
-    playSound('click');
-    navigate('leaderboard');
+    playSound("click");
+    navigate("leaderboard");
   };
 
   const handleShowAchievements = async () => {
-    playSound('click');
-    navigate('achievements');
+    playSound("click");
+    navigate("achievements");
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -96,47 +197,55 @@ const MainMenu: React.FC = () => {
         className="w-full max-w-md flex flex-col items-center text-center mt-6 mb-10 z-10"
       >
         <h1 className="text-[36px] font-display font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500 mb-[6px] leading-[36px]">
-          {toUpper(t('app_name'))}
+          {toUpper(t("app_name"))}
         </h1>
         <p className="text-slate-400 font-black text-[12px] leading-[16px] tracking-widest uppercase mt-[6px]">
-          {userName ? userName : t('guest')}
+          {userName ? userName : t("guest")}
         </p>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 gap-4 w-full max-w-md z-10 -mt-[21px]"
       >
         <button
-          onClick={() => navigateWithSound('single')}
+          onClick={() => navigateWithSound("single")}
           className="group relative w-full text-left overflow-hidden bg-white/10 hover:bg-white/15 p-4 rounded-2xl flex items-center justify-between border border-white/10 shadow-xl active:scale-95 transition-all backdrop-blur-sm mt-[2px]"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
               <Play className="w-6 h-6 text-white" />
             </div>
-            <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_single_player'))}</span>
+            <span className="text-lg font-bold tracking-wide text-white">
+              {toUpper(t("menu_single_player"))}
+            </span>
           </div>
-          <span className="text-white/50 text-xs font-mono hidden sm:block">VS CPU</span>
+          <span className="text-white/50 text-xs font-mono hidden sm:block">
+            VS CPU
+          </span>
         </button>
 
         <button
-          onClick={() => navigateWithSound('multi')}
+          onClick={() => navigateWithSound("multi")}
           className="group relative w-full text-left overflow-hidden bg-black/40 hover:bg-black/50 p-4 pt-4 rounded-2xl flex items-center justify-between border border-white/5 shadow-xl active:scale-95 transition-all backdrop-blur-sm -mt-1 -mb-1"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
             </div>
-            <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_two_player'))}</span>
+            <span className="text-lg font-bold tracking-wide text-white">
+              {toUpper(t("menu_two_player"))}
+            </span>
           </div>
-          <span className="text-white/30 text-[10px] font-mono hidden sm:block">TWO SCREEN</span>
+          <span className="text-white/30 text-[10px] font-mono hidden sm:block">
+            TWO SCREEN
+          </span>
         </button>
 
         <button
-          onClick={() => navigateWithSound('online')}
+          onClick={() => navigateWithSound("online")}
           className="group relative w-full text-left overflow-hidden bg-blue-600/20 hover:bg-blue-600/30 p-4 rounded-2xl flex items-center justify-between border border-blue-500/20 shadow-xl active:scale-95 transition-all backdrop-blur-sm -mt-1 -mb-1"
         >
           <div className="flex items-center gap-4">
@@ -144,19 +253,24 @@ const MainMenu: React.FC = () => {
               <Globe className="w-6 h-6 text-blue-400" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-wide text-white">{toUpper(t('menu_online_multiplayer'))}</span>
+              <span className="text-lg font-bold tracking-wide text-white">
+                {toUpper(t("menu_online_multiplayer"))}
+              </span>
               {onlinePlayers !== null && (
                 <span className="text-blue-400/80 text-[10px] font-bold flex items-center gap-1.5 mt-0.5">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                   </span>
-                  {onlinePlayers} {toUpper(t('online_players_count') || 'ÇEVRİM İÇİ')}
+                  {onlinePlayers}{" "}
+                  {toUpper(t("online_players_count") || "ÇEVRİM İÇİ")}
                 </span>
               )}
             </div>
           </div>
-          <span className="text-blue-400/50 text-[10px] font-mono hidden sm:block">SERVER</span>
+          <span className="text-blue-400/50 text-[10px] font-mono hidden sm:block">
+            SERVER
+          </span>
         </button>
 
         {userName ? (
@@ -164,11 +278,11 @@ const MainMenu: React.FC = () => {
             <div className="flex justify-between items-center mb-[1px]">
               <div className="flex items-center gap-3">
                 {userImageUrl ? (
-                  <img 
-                    src={userImageUrl} 
-                    alt={userName} 
+                  <img
+                    src={userImageUrl}
+                    alt={userName}
                     referrerPolicy="no-referrer"
-                    className="w-10 h-10 rounded-full border border-yellow-400/30 object-cover shadow-sm bg-black/30" 
+                    className="w-10 h-10 rounded-full border border-yellow-400/30 object-cover shadow-sm bg-black/30"
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-lg">
@@ -176,15 +290,19 @@ const MainMenu: React.FC = () => {
                   </div>
                 )}
                 <div className="flex flex-col">
-                  <span className="text-white/50 text-[10px] font-bold tracking-widest uppercase mb-0.5">Google Play</span>
-                  <span className="font-bold tracking-wide text-white text-sm">{userName}</span>
+                  <span className="text-white/50 text-[10px] font-bold tracking-widest uppercase mb-0.5">
+                    Google Play
+                  </span>
+                  <span className="font-bold tracking-wide text-white text-sm">
+                    {userName}
+                  </span>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={handleGoogleLogoutMock}
-                className={`bg-red-500/10 text-red-400 border border-red-900/50 px-3 py-2 rounded-lg text-xs font-bold tracking-widest hover:bg-red-500/20 active:scale-95 transition-all ${Capacitor.isNativePlatform() ? 'hidden' : ''}`}
+                className={`bg-red-500/10 text-red-400 border border-red-900/50 px-3 py-2 rounded-lg text-xs font-bold tracking-widest hover:bg-red-500/20 active:scale-95 transition-all ${Capacitor.isNativePlatform() ? "hidden" : ""}`}
               >
-                {toUpper(t('menu_logout') || 'Çıkış Yap')}
+                {toUpper(t("menu_logout") || "Çıkış Yap")}
               </button>
             </div>
             {/* Play Games Buttons */}
@@ -193,63 +311,99 @@ const MainMenu: React.FC = () => {
                 onClick={handleShowLeaderboard}
                 className="w-full bg-white/5 border border-white/10 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-green-400 active:scale-95 transition-all"
               >
-                <div className="w-5 h-3 flex items-center justify-center">🏆</div>
-                <span className="tracking-widest">{t('leaderboard') || 'SIRALAMA'}</span>
+                <div className="w-5 h-3 flex items-center justify-center">
+                  🏆
+                </div>
+                <span className="tracking-widest">
+                  {t("leaderboard") || "SIRALAMA"}
+                </span>
               </button>
               <button
                 onClick={handleShowAchievements}
                 className="w-full bg-white/5 border border-white/10 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-yellow-400 active:scale-95 transition-all"
               >
-                <div className="w-5 h-3 flex items-center justify-center">🎯</div>
-                 <span className="tracking-widest">{t('achievements') || 'HEDEFLER'}</span>
+                <div className="w-5 h-3 flex items-center justify-center">
+                  🎯
+                </div>
+                <span className="tracking-widest">
+                  {t("achievements") || "HEDEFLER"}
+                </span>
               </button>
             </div>
             <button
-          onClick={() => { playSound('click'); navigate('settings'); }}
-          className="w-full bg-blue-900/20 hover:bg-blue-900/30 active:scale-95 transition-all px-4 py-3 rounded-xl flex items-center justify-center gap-2 border border-blue-500/20 mt-2 backdrop-blur-sm"
-        >
-          <Cloud className="w-4 h-4 text-blue-400" />
-          <span className="text-[10px] font-bold text-blue-400 tracking-widest">{toUpper(t('settings_drive_button') || 'DRIVE YEDEKLEME')}</span>
-        </button>
+              onClick={handleDriveSync}
+              disabled={isSyncing || syncSuccess}
+              className={`w-full active:scale-95 transition-all px-4 py-3 rounded-xl flex items-center justify-center gap-2 border mt-2 backdrop-blur-sm disabled:opacity-50 ${
+                syncSuccess
+                  ? "bg-green-600/20 border-green-500/50"
+                  : "bg-blue-900/20 hover:bg-blue-900/30 border-blue-500/20"
+              }`}
+            >
+              {isSyncing ? (
+                <div className="w-4 h-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
+              ) : syncSuccess ? (
+                <Check className="w-4 h-4 text-green-400" />
+              ) : (
+                <Cloud className="w-4 h-4 text-blue-400" />
+              )}
+              <span
+                className={`text-[10px] font-bold tracking-widest ${
+                  syncSuccess ? "text-green-400" : "text-blue-400"
+                }`}
+              >
+                {isSyncing
+                  ? toUpper(t("settings_drive_uploading") || "YÜKLENİYOR...")
+                  : syncSuccess
+                    ? toUpper(t("settings_drive_success_title") || "BAŞARILI")
+                    : toUpper(t("settings_drive_button") || "DRIVE YEDEKLEME")}
+              </span>
+            </button>
           </div>
         ) : (
-          <button 
+          <button
             onClick={handleGoogleLoginMock}
             className="w-full flex justify-center items-center space-x-2 p-4 mt-1 bg-green-600/20 border border-green-500/50 text-green-400 rounded-2xl shadow-[0_0_15px_rgba(74,222,128,0.1)] hover:bg-green-600/30 active:scale-95 transition-all backdrop-blur-sm"
           >
             <Gamepad2 className="w-5 h-5" />
-            <span className="font-bold text-sm tracking-wider">{toUpper(t('login_google') || 'Play Games')}</span>
+            <span className="font-bold text-sm tracking-wider">
+              {toUpper(t("login_google") || "Play Games")}
+            </span>
           </button>
         )}
 
         <div className="grid grid-cols-3 gap-2 mt-[0px]">
           <button
-            onClick={() => navigateWithSound('stats')}
+            onClick={() => navigateWithSound("stats")}
             className="w-full bg-black/40 border border-white/5 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-white/80 active:scale-95 transition-all backdrop-blur-sm"
           >
-            <BarChart2 className="w-5 h-5" /> {toUpper(t('menu_stats'))}
+            <BarChart2 className="w-5 h-5" /> {toUpper(t("menu_stats"))}
           </button>
 
           <button
-            onClick={() => navigateWithSound('settings')}
+            onClick={() => navigateWithSound("settings")}
             className="w-full bg-black/40 border border-white/5 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-white/10 text-[10px] font-bold text-white/80 active:scale-95 transition-all backdrop-blur-sm"
           >
-            <SettingsIcon className="w-5 h-5" /> {toUpper(t('menu_settings'))}
+            <SettingsIcon className="w-5 h-5" /> {toUpper(t("menu_settings"))}
           </button>
 
           <button
             onClick={handleExit}
             className="w-full bg-red-950/30 border border-red-900/50 py-3 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-red-900/40 text-[10px] font-bold text-red-400 active:scale-95 transition-all backdrop-blur-sm"
           >
-            <LogOut className="w-5 h-5" /> {toUpper(t('menu_exit'))}
+            <LogOut className="w-5 h-5" /> {toUpper(t("menu_exit"))}
           </button>
         </div>
-
       </motion.div>
-      <AlertModal 
-        isOpen={!!errorMsg} 
-        title={toUpper(t('login_error_title') || 'GİRİŞ BAŞARISIZ')}
-        message={errorMsg || ''}
+      <AlertModal
+        isOpen={!!syncMessage}
+        title={syncMessage?.title || ""}
+        message={syncMessage?.msg || ""}
+        onClose={() => setSyncMessage(null)}
+      />
+      <AlertModal
+        isOpen={!!errorMsg}
+        title={toUpper(t("login_error_title") || "GİRİŞ BAŞARISIZ")}
+        message={errorMsg || ""}
         onClose={() => setErrorMsg(null)}
       />
     </motion.div>

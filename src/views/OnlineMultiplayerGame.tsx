@@ -6,6 +6,7 @@ import { Move, MOVES } from '../model/GameModel';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, Wifi } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { Capacitor } from '@capacitor/core';
 import AlertModal from '../components/AlertModal';
 import { STORAGE_KEYS } from '../config/storage';
 
@@ -100,7 +101,7 @@ const OnlineMultiplayerGame: React.FC = () => {
 
   useEffect(() => {
     // Connect to Websocket
-    const socketUrl = import.meta.env.VITE_SERVER_URL || undefined;
+    const socketUrl = import.meta.env.VITE_SERVER_URL || (Capacitor.isNativePlatform() ? 'https://ais-pre-krvzfwmorvyucwdfnc2p6j-731883338395.europe-west2.run.app' : window.location.origin);
     const newSocket = io(socketUrl);
     setSocket(newSocket);
 

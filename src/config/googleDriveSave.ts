@@ -5,13 +5,14 @@ export const getHeaders = (accessToken: string) => ({
 });
 
 export const findSaveFile = async (accessToken: string): Promise<string | null> => {
-  const q = encodeURIComponent(`name='${DRIVE_SAVE_FILE_NAME}' and spaces='appDataFolder'`);
+  const q = encodeURIComponent(`name='${DRIVE_SAVE_FILE_NAME}'`);
   const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=appDataFolder`, {
     headers: getHeaders(accessToken),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to find save file on Google Drive');
+    const errorText = await response.text();
+    throw new Error(`Failed to find save file on Google Drive: ${response.status} ${errorText}`);
   }
 
   const data = await response.json();
@@ -37,7 +38,8 @@ export const createSaveFile = async (accessToken: string): Promise<string> => {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to create save file on Google Drive');
+    const errorText = await response.text();
+    throw new Error(`Failed to create save file on Google Drive: ${response.status} ${errorText}`);
   }
 
   const data = await response.json();
@@ -55,7 +57,8 @@ export const uploadSaveData = async (accessToken: string, fileId: string, saveDa
   });
 
   if (!response.ok) {
-    throw new Error('Failed to upload save data to Google Drive');
+    const errorText = await response.text();
+    throw new Error(`Failed to upload save data to Google Drive: ${response.status} ${errorText}`);
   }
 };
 
@@ -65,7 +68,8 @@ export const downloadSaveData = async (accessToken: string, fileId: string): Pro
   });
 
   if (!response.ok) {
-    throw new Error('Failed to download save data from Google Drive');
+    const errorText = await response.text();
+    throw new Error(`Failed to download save data from Google Drive: ${response.status} ${errorText}`);
   }
 
   return response.json();
